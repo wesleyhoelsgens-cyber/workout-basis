@@ -1,5 +1,15 @@
 # Workout Basis
 
+## V2 in ontwikkeling — fase 2
+
+De ontwikkeltak `codex/workout-v2` voegt centrale oefeningdefinities, spiergroeplabels en dataversie 2 toe aan de bestaande app. De Workout Builder is nog niet toegevoegd. De openbare website gebruikt voorlopig V1.
+
+De bestaande opslagsleutel blijft `workout_basis_universal_v1`; `schemaVersion: 2` markeert de nieuwe gegevensstructuur. Bij de eerste V1-migratie wordt het originele JSON-bestand in `workout_basis_universal_v1_backup_before_v2` bewaard voordat de actieve opslag wordt vervangen. Bij onleesbare gegevens of mislukte migratie verschijnt een herstelscherm met een download van de oorspronkelijke gegevens. De backup wordt niet automatisch teruggezet, zodat latere trainingen niet worden overschreven.
+
+Persoonlijke oefening-ID's, instellingen, historie en lopende trainingen blijven behouden. `exerciseLibrary()` combineert persoonlijke oefeningen met centrale kenmerken en historie op oefening-ID. Verwijderde oefeningen met historie worden als gearchiveerde bibliotheekitems aangeboden en niet teruggezet in het basisschema. Onbekende eigen oefeningen worden niet automatisch aan een spiergroep toegewezen. Historie wordt niet gedupliceerd; het laatst gebruikte gewicht wordt daarvan afgeleid en blijft gescheiden van het instelbare gewicht.
+
+Fase 2: 15 automatische tests geslaagd, waaronder de 10 bestaande tests. Aanvullend in de browser getest: training starten, decimale gewichtsinvoer, cardio-invoer, sets afvinken, herladen/hervatten, afronden en historie. Geen fouten in de browserconsole. Safari/iPhone en Edge blijven onderdeel van fase 6.
+
 Zelfstandige Nederlandstalige workout-tracker, los van SVO Academy.
 
 **Open de app:** https://wesleyhoelsgens-cyber.github.io/workout-basis/

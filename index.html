@@ -191,6 +191,223 @@ button{min-height:44px}
 
 <script>
 const KEY='workout_basis_universal_v1';
+const SCHEMA_VERSION=2;
+const BACKUP_KEY=KEY+'_backup_before_v2';
+const EXERCISE_CATALOG=[
+  {
+    "id": "leg-press",
+    "name": "Leg press",
+    "machine": "63",
+    "sets": 3,
+    "reps": 15,
+    "weight": 36,
+    "step": 1,
+    "note": "Benen • rustig zakken, knieën volgen de voetlijn",
+    "primaryMuscle": "Benen",
+    "secondaryMuscles": [
+      "Billen"
+    ],
+    "movement": "Duwen met benen"
+  },
+  {
+    "id": "leg-curl",
+    "name": "Leg curl",
+    "machine": "62",
+    "sets": 3,
+    "reps": 15,
+    "weight": 0,
+    "step": 1,
+    "note": "Hamstrings • gewicht nog instellen",
+    "primaryMuscle": "Hamstrings",
+    "secondaryMuscles": [],
+    "movement": "Kniebuiging"
+  },
+  {
+    "id": "leg-extension",
+    "name": "Leg extension",
+    "machine": "61",
+    "sets": 3,
+    "reps": 15,
+    "weight": 14,
+    "step": 1,
+    "note": "Bovenbenen • rug goed tegen de leuning",
+    "primaryMuscle": "Benen",
+    "secondaryMuscles": [],
+    "movement": "Kniestrekking"
+  },
+  {
+    "id": "glute",
+    "name": "Glute",
+    "machine": "60",
+    "sets": 3,
+    "reps": 15,
+    "weight": 0,
+    "step": 1,
+    "note": "Billen • gewicht nog instellen",
+    "primaryMuscle": "Billen",
+    "secondaryMuscles": [
+      "Hamstrings"
+    ],
+    "movement": "Heupstrekking"
+  },
+  {
+    "id": "chest-press",
+    "name": "Chest press",
+    "machine": "67",
+    "sets": 3,
+    "reps": 15,
+    "weight": 18,
+    "step": 1,
+    "note": "Borst • niet overstrekken",
+    "primaryMuscle": "Borst",
+    "secondaryMuscles": [
+      "Triceps",
+      "Schouders"
+    ],
+    "movement": "Horizontaal duwen"
+  },
+  {
+    "id": "pec-fly",
+    "name": "Pec fly",
+    "machine": "66",
+    "sets": 3,
+    "reps": 15,
+    "weight": 0,
+    "step": 1,
+    "note": "Borst • gewicht nog instellen",
+    "primaryMuscle": "Borst",
+    "secondaryMuscles": [],
+    "movement": "Borstisolatie"
+  },
+  {
+    "id": "lat-pulldown",
+    "name": "Lat pulldown",
+    "machine": "68",
+    "sets": 3,
+    "reps": 15,
+    "weight": 27,
+    "step": 1,
+    "note": "Rug • trek richting bovenborst",
+    "primaryMuscle": "Rug",
+    "secondaryMuscles": [
+      "Biceps"
+    ],
+    "movement": "Verticaal trekken"
+  },
+  {
+    "id": "seated-row",
+    "name": "Seated row",
+    "machine": "54",
+    "sets": 3,
+    "reps": 15,
+    "weight": 14,
+    "step": 1,
+    "note": "Rug • borst omhoog, schouders laag",
+    "primaryMuscle": "Rug",
+    "secondaryMuscles": [
+      "Biceps"
+    ],
+    "movement": "Horizontaal trekken"
+  },
+  {
+    "id": "shoulder-press",
+    "name": "Shoulder press",
+    "machine": "",
+    "sets": 3,
+    "reps": 15,
+    "weight": 0,
+    "step": 1,
+    "note": "Schouders • gewicht nog instellen",
+    "primaryMuscle": "Schouders",
+    "secondaryMuscles": [
+      "Triceps"
+    ],
+    "movement": "Verticaal duwen"
+  },
+  {
+    "id": "biceps-curl",
+    "name": "Biceps curl",
+    "machine": "59",
+    "sets": 3,
+    "reps": 15,
+    "weight": 0,
+    "step": 1,
+    "note": "Armen • gewicht nog instellen",
+    "primaryMuscle": "Biceps",
+    "secondaryMuscles": [],
+    "movement": "Elleboogbuiging"
+  },
+  {
+    "id": "triceps-press",
+    "name": "Triceps press",
+    "machine": "58",
+    "sets": 3,
+    "reps": 15,
+    "weight": 0,
+    "step": 1,
+    "note": "Armen • gewicht nog instellen",
+    "primaryMuscle": "Triceps",
+    "secondaryMuscles": [],
+    "movement": "Elleboogstrekking"
+  },
+  {
+    "id": "ab-crunch",
+    "name": "Ab crunch",
+    "machine": "64",
+    "sets": 3,
+    "reps": 15,
+    "weight": 0,
+    "step": 1,
+    "note": "Core • gecontroleerd bewegen",
+    "primaryMuscle": "Core",
+    "secondaryMuscles": [],
+    "movement": "Rompbuiging"
+  },
+  {
+    "id": "rotary-torso",
+    "name": "Rotary torso",
+    "machine": "55",
+    "sets": 3,
+    "reps": 15,
+    "weight": 0,
+    "step": 1,
+    "note": "Core • rustig roteren, niet trekken",
+    "primaryMuscle": "Core",
+    "secondaryMuscles": [],
+    "movement": "Romprotatie"
+  },
+  {
+    "id": "back-extension",
+    "name": "Back extension",
+    "machine": "56",
+    "sets": 3,
+    "reps": 10,
+    "weight": 0,
+    "step": 1,
+    "note": "Onderrug • gecontroleerd, niet overstrekken",
+    "primaryMuscle": "Rug",
+    "secondaryMuscles": [
+      "Core",
+      "Billen",
+      "Hamstrings"
+    ],
+    "movement": "Rompstrekking"
+  },
+  {
+    "id": "knee-raise",
+    "name": "Knee raise",
+    "machine": "Bank",
+    "sets": 3,
+    "reps": 10,
+    "weight": 0,
+    "step": 1,
+    "note": "Core • knieën gecontroleerd heffen",
+    "primaryMuscle": "Core",
+    "secondaryMuscles": [],
+    "movement": "Knieheffen"
+  }
+];
+let recoveryRaw=null;
 let app = load();
 let activeTab='workout';
 
@@ -198,40 +415,82 @@ function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36
 function today(){return new Date().toLocaleDateString('nl-NL')}
 
 function defaultExercises(){
-  return [
-    {id:uid(),name:'Leg press',machine:'63',sets:3,reps:15,weight:36,step:1,note:'Benen • rustig zakken, knieën volgen de voetlijn'},
-    {id:uid(),name:'Leg curl',machine:'62',sets:3,reps:15,weight:0,step:1,note:'Hamstrings • gewicht nog instellen'},
-    {id:uid(),name:'Leg extension',machine:'61',sets:3,reps:15,weight:14,step:1,note:'Bovenbenen • rug goed tegen de leuning'},
-    {id:uid(),name:'Glute',machine:'60',sets:3,reps:15,weight:0,step:1,note:'Billen • gewicht nog instellen'},
-    {id:uid(),name:'Chest press',machine:'67',sets:3,reps:15,weight:18,step:1,note:'Borst • niet overstrekken'},
-    {id:uid(),name:'Pec fly',machine:'66',sets:3,reps:15,weight:0,step:1,note:'Borst • gewicht nog instellen'},
-    {id:uid(),name:'Lat pulldown',machine:'68',sets:3,reps:15,weight:27,step:1,note:'Rug • trek richting bovenborst'},
-    {id:uid(),name:'Seated row',machine:'54',sets:3,reps:15,weight:14,step:1,note:'Rug • borst omhoog, schouders laag'},
-    {id:uid(),name:'Shoulder press',machine:'',sets:3,reps:15,weight:0,step:1,note:'Schouders • gewicht nog instellen'},
-    {id:uid(),name:'Biceps curl',machine:'59',sets:3,reps:15,weight:0,step:1,note:'Armen • gewicht nog instellen'},
-    {id:uid(),name:'Triceps press',machine:'58',sets:3,reps:15,weight:0,step:1,note:'Armen • gewicht nog instellen'},
-    {id:uid(),name:'Ab crunch',machine:'64',sets:3,reps:15,weight:0,step:1,note:'Core • gecontroleerd bewegen'},
-    {id:uid(),name:'Rotary torso',machine:'55',sets:3,reps:15,weight:0,step:1,note:'Core • rustig roteren, niet trekken'},
-    {id:uid(),name:'Back extension',machine:'56',sets:3,reps:10,weight:0,step:1,note:'Onderrug • gecontroleerd, niet overstrekken'},
-    {id:uid(),name:'Knee raise',machine:'Bank',sets:3,reps:10,weight:0,step:1,note:'Core • knieën gecontroleerd heffen'}
-  ];
+  return EXERCISE_CATALOG.map(def=>enrichExercise({...def,id:uid(),catalogId:def.id}));
+}
+function enrichExercise(ex){
+  const def=EXERCISE_CATALOG.find(d=>d.id===ex.catalogId) || EXERCISE_CATALOG.find(d=>d.name.toLowerCase()===String(ex.name).trim().toLowerCase());
+  return {...ex,catalogId:ex.catalogId || (def?def.id:null),
+    primaryMuscle:ex.primaryMuscle ?? (def?def.primaryMuscle:null),
+    secondaryMuscles:[...(ex.secondaryMuscles ?? (def?def.secondaryMuscles:[]))],
+    movement:ex.movement ?? (def?def.movement:'Onbekend'),
+    defaultSets:ex.defaultSets ?? ex.sets,defaultReps:ex.defaultReps ?? ex.reps};
+}
+function migrateData(source){
+  if(!source || typeof source!=='object' || Array.isArray(source))throw Error('Ongeldige opslag');
+  if(source.schemaVersion!==undefined && source.schemaVersion!==1 && source.schemaVersion!==2)throw Error('Onbekende dataversie');
+  const data=JSON.parse(JSON.stringify(source));
+  if(!data.profiles || typeof data.profiles!=='object' || Array.isArray(data.profiles) || !data.profiles[data.activeProfile])throw Error('Ongeldige profielen');
+  for(const [id,p] of Object.entries(data.profiles)){
+    if(!p || p.id!==id || !Array.isArray(p.exercises) || !Array.isArray(p.history))throw Error('Ongeldig profiel');
+    if(p.cardio===undefined)p.cardio=[];
+    if(!Array.isArray(p.cardio))throw Error('Ongeldige cardio');
+    const ids=new Set();
+    p.exercises=p.exercises.map(ex=>{
+      if(!ex || typeof ex.id!=='string' || !ex.id || ids.has(ex.id) || typeof ex.name!=='string')throw Error('Ongeldige oefening');
+      ids.add(ex.id);return enrichExercise(ex);
+    });
+    if(p.history.some(s=>!s || !Array.isArray(s.items) || (s.cardio!==undefined && !Array.isArray(s.cardio))))throw Error('Ongeldige historie');
+  }
+  if(data.session && (!data.profiles[data.session.profileId] || !Array.isArray(data.session.items)))throw Error('Ongeldige lopende training');
+  if(data.session && data.session.cardio===undefined){
+    data.session.cardio=data.profiles[data.session.profileId].cardio.map(c=>({cardioId:c.id,type:c.type,minutes:c.minutes,level:c.level,calories:c.calories,note:c.note||''}));
+  }
+  if(data.session && !Array.isArray(data.session.cardio))throw Error('Ongeldige lopende cardio');
+  data.schemaVersion=SCHEMA_VERSION;
+  return data;
+}
+function exerciseHistory(exId,p=profile()){
+  return p.history.flatMap(s=>s.items.filter(i=>i.exerciseId===exId).map(item=>({...item,date:s.date,timestamp:s.timestamp})));
+}
+function exerciseLibrary(p=profile()){
+  const entries=new Map(p.exercises.map(e=>[e.id,{...enrichExercise(e),archived:false}]));
+  for(const s of p.history)for(const item of s.items){
+    if(!entries.has(item.exerciseId))entries.set(item.exerciseId,{...enrichExercise({id:item.exerciseId,name:item.name,sets:item.sets,reps:item.reps,weight:item.weight,machine:'',note:'',step:1}),archived:true});
+  }
+  return [...entries.values()].map(e=>{
+    const history=exerciseHistory(e.id,p);
+    return {...e,history,lastUsedWeight:history.length?history[history.length-1].weight:null};
+  });
 }
 function load(){
   try{
-    const x=JSON.parse(localStorage.getItem(KEY));
-    if(x && x.profiles){
-      Object.values(x.profiles).forEach(p=>{ if(!p.cardio) p.cardio=[]; });
-      return x;
+    const raw=localStorage.getItem(KEY);
+    recoveryRaw=raw;
+    if(raw!==null){
+      const source=JSON.parse(raw),data=migrateData(source);
+      if(source.schemaVersion!==SCHEMA_VERSION){
+        if(localStorage.getItem(BACKUP_KEY)===null)localStorage.setItem(BACKUP_KEY,raw);
+        // Verify the backup exists before replacing the active storage.
+        if(localStorage.getItem(BACKUP_KEY)===null)throw Error('Backup ontbreekt');
+        localStorage.setItem(KEY,JSON.stringify(data));
+      }
+      return data;
     }
-  }catch(e){}
-  const id=uid();
-  return {activeProfile:id, session:null, profiles:{
-    [id]:{id,name:'Basisprofiel',exercises:defaultExercises(),cardio:[
-      {id:uid(),type:'Crosstrainer',minutes:10,level:5,calories:0,note:'Warming-up'}
-    ],history:[]}
-  }};
+    const id=uid();
+    return {schemaVersion:SCHEMA_VERSION,activeProfile:id,session:null,profiles:{
+      [id]:{id,name:'Basisprofiel',exercises:defaultExercises(),cardio:[
+        {id:uid(),type:'Crosstrainer',minutes:10,level:5,calories:0,note:'Warming-up'}
+      ],history:[]}
+    }};
+  }catch(e){return null}
+}
+function exportRecovery(){
+  const blob=new Blob([recoveryRaw??''],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='workout-herstel-origineel.json';a.click();URL.revokeObjectURL(a.href);
 }
 function save(redraw=true){
+  if(!app)return;
+  profile().exercises=profile().exercises.map(enrichExercise);
   syncSession();
   try{localStorage.setItem(KEY,JSON.stringify(app))}
   catch(e){alert('Opslaan is niet gelukt. Exporteer een backup via Personen voordat je deze pagina sluit.')}
@@ -317,7 +576,7 @@ function renderWorkout(){
     return `<div class="card exercise">
       <div class="exercise-top">
         <div>
-          <h3>${esc(ex.name)}</h3>
+          <h3>${esc(ex.name)}</h3><div class="badge">${esc(ex.primaryMuscle || "Nog niet ingedeeld")}</div>
           <div class="meta">${ex.machine?`Toestel ${esc(ex.machine)} • `:''}${ex.sets} × ${ex.reps}</div>
           ${ex.note?`<div class="note">Let op: ${esc(ex.note)}</div>`:''}
         </div>
@@ -504,7 +763,9 @@ function fmt(n){return Number(n).toLocaleString('nl-NL',{maximumFractionDigits:1
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 document.querySelectorAll('input[placeholder]').forEach(el=>el.setAttribute('aria-label',el.placeholder));
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeExercise();closeCardio();closeProfiles()}});
-render();
+if(app){render()}else{
+  document.querySelector('.wrap').innerHTML='<div class="card"><h1>Gegevens veilig bewaard</h1><p>Je opgeslagen gegevens konden niet veilig worden geopend of bijgewerkt. Er is geen nieuw profiel over je gegevens opgeslagen.</p><p>Download eerst het originele bestand als backup. Probeer daarna de pagina opnieuw te laden of vraag hulp met dit bestand.</p><button onclick="exportRecovery()">Originele gegevens downloaden</button></div>';
+}
 </script>
 </body>
 </html>

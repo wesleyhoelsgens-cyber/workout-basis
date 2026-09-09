@@ -3,18 +3,67 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const script=fs.readFileSync(__dirname+'/index.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+function legacyFixture(){
+  const seed=setup();
+  seed.run('startOrFinish();setWeight(profile().exercises[0].id,"45");toggleSet(profile().exercises[0].id,2);startOrFinish();startOrFinish();toggleSet(profile().exercises[0].id,1)');
+  const data=JSON.parse(seed.run('JSON.stringify(app)'));
+  delete data.schemaVersion;
+  for(const p of Object.values(data.profiles))for(const e of p.exercises)for(const key of ['catalogId','primaryMuscle','secondaryMuscles','movement','defaultSets','defaultReps'])delete e[key];
+  return data;
+}
+test('V1 migration keeps every original field, ID, history and active session',()=>{
+  const before=legacyFixture(),raw=JSON.stringify(before),t=setup(raw),after=JSON.parse(t.run('JSON.stringify(app)'));
+  assert.equal(after.schemaVersion,2);
+  assert.deepEqual(after.session,before.session);
+  for(const [id,p] of Object.entries(before.profiles)){
+    assert.deepEqual(after.profiles[id].history,p.history);
+    for(const e of p.exercises)for(const [key,value] of Object.entries(e))assert.deepEqual(after.profiles[id].exercises.find(x=>x.id===e.id)[key],value);
+  }
+  assert.equal(t.storage.get('workout_basis_universal_v1_backup_before_v2'),raw);
+  assert.equal(t.run('profile().exercises[0].primaryMuscle'),'Benen');
+});
+test('migration is repeatable, non-mutating and preserves custom exercise fields',()=>{
+  const data=legacyFixture(),p=data.profiles[data.activeProfile];
+  p.exercises.push({id:'custom',name:'Eigen oefening',sets:4,reps:8,weight:12,step:2,machine:'X',note:'Eigen notitie',customFlag:true});
+  const raw=JSON.stringify(data),t=setup(raw);
+  assert.equal(t.run('profile().exercises.at(-1).primaryMuscle'),null);
+  assert.equal(t.run('profile().exercises.at(-1).customFlag'),true);
+  const result=t.run('JSON.stringify(app)');
+  assert.equal(t.run('JSON.stringify(migrateData(app))'),result);
+  const reload=setup(result);assert.equal(reload.run('JSON.stringify(app)'),result);
+  assert.equal(JSON.stringify(data),raw);
+});
+test('history-only exercises remain available as archived library entries',()=>{
+  const data=legacyFixture();data.session=null;const p=data.profiles[data.activeProfile],removed=p.exercises.shift();
+  const t=setup(JSON.stringify(data));
+  assert.equal(t.run('profile().exercises.length'),14);
+  const entry=JSON.parse(t.run(`JSON.stringify(exerciseLibrary().find(e=>e.id===${JSON.stringify(removed.id)}))`));
+  assert.equal(entry.archived,true);assert.equal(entry.lastUsedWeight,45);assert.equal(entry.history.length,1);
+});
+test('invalid JSON, malformed data, future version and backup failure never overwrite source',()=>{
+  for(const raw of ['{broken',JSON.stringify({profiles:{}}),JSON.stringify({...legacyFixture(),schemaVersion:99})]){
+    const t=setup(raw);assert.equal(t.run('app'),null);assert.equal(t.stored(),raw);assert.match(t.el.wrap.innerHTML,/Originele gegevens downloaden/);
+  }
+  const raw=JSON.stringify(legacyFixture()),t=setup(raw,{failWrite:true});assert.equal(t.run('app'),null);assert.equal(t.stored(),raw);
+});
+test('library separates latest historical weight from editable default and other profiles',()=>{
+  const t=setup(JSON.stringify(legacyFixture()));t.run('startOrFinish();setWeight(profile().exercises[0].id,"80")');
+  assert.equal(t.run('exerciseLibrary()[0].lastUsedWeight'),45);assert.equal(t.run('exerciseLibrary()[0].weight'),80);
+  t.run('document.getElementById("newProfileName").value="Tweede";addProfile()');
+  assert.equal(t.run('exerciseLibrary()[0].lastUsedWeight'),null);
+});
 test('weights and cardio editable before starting and decimal comma supported',()=>{const t=setup();t.run('setWeight(profile().exercises[0].id,"42,5",true);setCardio(profile().cardio[0].id,"minutes","18",true)');const r=setup(t.stored());assert.equal(r.run('profile().exercises[0].weight'),42.5);assert.equal(r.run('profile().cardio[0].minutes'),18);assert.equal(r.run('app.session'),null);r.run('changeWeight(profile().exercises[0].id,1);startOrFinish()');assert.equal(r.run('app.session.items[0].weight'),43.5)});
 test('typing persists without replacing inputs and survives immediate finish',()=>{const t=setup();t.run('startOrFinish()');const before=t.el.workoutView.innerHTML;t.run('setWeight(profile().exercises[0].id,"55,5",true);setCardio(profile().cardio[0].id,"calories","120",true)');assert.equal(t.el.workoutView.innerHTML,before);t.run('startOrFinish()');assert.equal(t.run('profile().history[0].items[0].weight'),55.5);assert.equal(t.run('profile().history[0].cardio[0].calories'),120)});
 test('editing another profile leaves running session untouched',()=>{const t=setup();t.run('startOrFinish();document.getElementById("newProfileName").value="Tweede";addProfile();setWeight(profile().exercises[0].id,"60",true)');assert.equal(t.run('app.session.items[0].weight'),36);assert.equal(t.run('profile().exercises[0].weight'),60)});
-function setup(saved){
-  const elements={},alerts=[];let stored=saved;
+function setup(saved,options={}){
+  const elements={},alerts=[],storage=new Map(saved===undefined?[]:[['workout_basis_universal_v1',saved]]);
   const ctx=vm.createContext({console,Date,Math,Number,JSON,Array,Object,String,Blob,URL,
     alert:x=>alerts.push(x),confirm:()=>true,
-    localStorage:{getItem:()=>stored,setItem:(k,v)=>{stored=v}},
-    document:{getElementById:id=>elements[id]??={value:'',style:{},innerHTML:'',checkValidity(){return this.valid!==false},reportValidity(){},focus(){},getAttribute(){return id}},querySelectorAll:()=>[],addEventListener(){}}
+    localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>{if(options.failWrite)throw Error('full');storage.set(k,v)}},
+    document:{getElementById:id=>elements[id]??={value:'',style:{},innerHTML:'',checkValidity(){return this.valid!==false},reportValidity(){},focus(){},getAttribute(){return id}},querySelector:()=>elements.wrap??={innerHTML:''},querySelectorAll:()=>[],addEventListener(){}}
   });
   vm.runInContext(script,ctx);
-  return {run:s=>vm.runInContext(s,ctx),el:elements,alerts,stored:()=>stored};
+  return {run:s=>vm.runInContext(s,ctx),el:elements,alerts,storage,stored:()=>storage.get('workout_basis_universal_v1')};
 }
 test('default workout and session survive reload',()=>{const t=setup();assert.equal(t.run('profile().exercises.length'),15);t.run('startOrFinish();changeWeight(profile().exercises[0].id,1);toggleSet(profile().exercises[0].id,1)');const r=setup(t.stored());assert.equal(r.run('app.session.items[0].weight'),37);assert.equal(r.run('app.session.items[0].completedSets.length'),1)});
 test('history counts completed sets and remembers previous weight',()=>{const t=setup();t.run('startOrFinish();toggleSet(profile().exercises[0].id,1);toggleSet(profile().exercises[0].id,3);setWeight(profile().exercises[0].id,"42.5");startOrFinish()');assert.match(t.el.historyView.innerHTML,/2\/3 sets/);assert.equal(t.run('lastWeight(profile().exercises[0].id)'),42.5);t.run('startOrFinish()');assert.equal(t.run('app.session.items[0].weight'),42.5)});
