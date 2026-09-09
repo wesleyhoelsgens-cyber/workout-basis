@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Workout Basis">
+<meta name="theme-color" content="#0f1115">
+<title>Workout Basis</title>
+<style>
+:root{
+  --bg:#0f1115; --panel:#171a21; --panel2:#20242d; --text:#f6f7f9;
+  --muted:#9ca3af; --line:#2d3340; --accent:#f5f7fa; --good:#1f8f5f;
+  --warn:#d89a2b; --danger:#c94b4b; --shadow:0 14px 36px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0d0f13 0%,#12151b 100%);
+font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text)}
+.wrap{max-width:860px;margin:auto;padding:18px 14px 80px}
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:6px 0 18px}
+h1{font-size:1.35rem;margin:0}.sub{color:var(--muted);font-size:.9rem}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+.toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:14px}
+select,input,button{font:inherit}
+select,input{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+button{border:0;border-radius:12px;padding:11px 14px;background:#eef1f5;color:#111;font-weight:750;cursor:pointer}
+button.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+button.danger{background:#3a2023;color:#ffdadd;border:1px solid #6b3036}
+button.small{padding:8px 10px;font-size:.86rem}
+.tabs{display:flex;gap:8px;margin:14px 0}
+.tab{flex:1}
+.tab.active{outline:2px solid #e8edf4}
+.exercise{margin:12px 0}
+.exercise-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.exercise h3{margin:0;font-size:1.1rem}
+.meta{color:var(--muted);font-size:.88rem;margin-top:3px}
+.note{margin-top:8px;color:#d7dce4;font-size:.9rem}
+.weight-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.metric{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px}
+.label{font-size:.77rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.value{font-size:1.45rem;font-weight:800;margin-top:3px}
+.weight-edit{display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:center}
+.weight-edit button{padding:10px 0;font-size:1.2rem}
+.weight-input{text-align:center;font-size:1.1rem;font-weight:800;width:100%}
+.sets{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.setbtn{min-width:54px;background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+.setbtn.done{background:var(--good);border-color:transparent}
+.footer-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.empty{color:var(--muted);text-align:center;padding:24px}
+.modalback{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:9}
+.modal{width:min(860px,100%);background:#151922;border-radius:22px 22px 0 0;padding:18px;border:1px solid var(--line)}
+.modal{max-height:90vh;overflow-y:auto}.history-item{overflow-wrap:anywhere}.history-item strong{text-align:right}.exercise-top>div,.cardio-title>div{min-width:0;overflow-wrap:anywhere}input{min-width:0}button:disabled{opacity:.45;cursor:default}
+.modal h2{margin:0 0 14px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.formgrid .wide{grid-column:1/-1}
+.history-item{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding:10px 0}
+.history-item:first-child{border-top:0}
+.badge{font-size:.78rem;padding:5px 8px;border-radius:999px;background:var(--panel2);color:var(--muted)}
+.cardio-card{margin:12px 0;border:1px solid #3a4658}
+.cardio-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.cardio-field{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px}
+.cardio-field input,.cardio-field select{width:100%;margin-top:6px}
+.cardio-title{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+@media(max-width:700px){.cardio-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.toolbar{grid-template-columns:1fr}.weight-grid{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}.formgrid .wide{grid-column:auto}}
+
+html{-webkit-text-size-adjust:100%;background:#0f1115}
+body{
+  min-height:100vh;
+  min-height:-webkit-fill-available;
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
+  -webkit-tap-highlight-color:transparent;
+}
+button,select,input{
+  touch-action:manipulation;
+  -webkit-appearance:none;
+  appearance:none;
+}
+input,select{font-size:16px} /* voorkomt automatisch inzoomen op iPhone */
+button{min-height:44px}
+.wrap{
+  padding-left:max(14px,env(safe-area-inset-left));
+  padding-right:max(14px,env(safe-area-inset-right));
+  padding-bottom:max(80px,env(safe-area-inset-bottom));
+}
+@supports (-webkit-touch-callout:none){
+  .modalback{height:-webkit-fill-available}
+}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Workout Basis</h1>
+      <div class="sub">Persoonlijk schema • vorige keer vs. vandaag</div>
+    </div>
+    <button class="secondary small" onclick="openProfiles()">Personen</button>
+  </header>
+
+  <div class="toolbar">
+    <select aria-label="Persoon" id="profileSelect" onchange="switchProfile(this.value)"></select>
+    <div class="row">
+      <button class="secondary" onclick="openExercise()">+ Oefening</button>
+      <button class="secondary" onclick="openCardio()">+ Cardio</button>
+      <button onclick="startOrFinish()" id="sessionBtn">Training starten</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tabWorkout" onclick="showTab('workout')">Training</button>
+    <button class="tab secondary" id="tabHistory" onclick="showTab('history')">Historie</button>
+  </div>
+
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="label">Basisprogramma</div>
+    <div style="font-weight:800;font-size:1.05rem;margin-top:4px">Total body workout</div>
+    <div class="meta" style="margin-top:6px">Warming-up + benen + billen + borst + rug + schouders + armen + core. Oefeningen met 0 kg staan klaar om tijdens de eerste training in te stellen.</div>
+  </div>
+  
+  <div class="card" style="margin-bottom:14px">
+    <div class="label">Mobiel gebruik</div>
+    <div class="meta" style="margin-top:6px">
+      Deze versie is geoptimaliseerd voor iPhone. Je gegevens worden lokaal in de browser opgeslagen.
+    </div>
+  </div>
+<section id="workoutView"></section>
+  <section id="historyView" style="display:none"></section>
+</div>
+
+<div class="modalback" id="exerciseModal">
+  <div class="modal">
+    <h2>Oefening toevoegen</h2>
+    <div class="formgrid">
+      <input id="exName" class="wide" placeholder="Naam oefening, bijv. Shoulder press">
+      <input id="exMachine" placeholder="Toestelnummer">
+      <input id="exSets" type="number" min="1" value="3" placeholder="Sets">
+      <input id="exReps" type="number" min="1" value="15" placeholder="Reps">
+      <input id="exWeight" type="number" min="0" step="0.5" value="0" placeholder="Startgewicht kg">
+      <input id="exStep" type="number" min="0.5" step="0.5" value="1" placeholder="Stap + / - kg">
+      <input id="exNote" class="wide" placeholder="Aandachtspunt (optioneel)">
+    </div>
+    <div class="footer-actions">
+      <button class="secondary" onclick="closeExercise()">Annuleren</button>
+      <button onclick="addExercise()">Toevoegen</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modalback" id="cardioModal">
+  <div class="modal">
+    <h2>Cardio toevoegen</h2>
+    <div class="formgrid">
+      <select id="cardioType" class="wide">
+        <option value="Crosstrainer">Crosstrainer</option>
+        <option value="Loopband">Loopband</option>
+        <option value="Roeimachine">Roeimachine</option>
+      </select>
+      <input id="cardioMinutes" type="number" min="1" value="10" placeholder="Minuten">
+      <input id="cardioLevel" type="number" min="0" step="1" value="5" placeholder="Zwaarte / niveau">
+      <input id="cardioCalories" type="number" min="0" step="1" value="0" placeholder="Calorieën">
+      <input id="cardioNote" class="wide" placeholder="Aandachtspunt (optioneel)">
+    </div>
+    <div class="footer-actions">
+      <button class="secondary" onclick="closeCardio()">Annuleren</button>
+      <button onclick="addCardio()">Toevoegen</button>
+    </div>
+  </div>
+</div>
+
+<div class="modalback" id="profilesModal">
+  <div class="modal">
+    <h2>Personen</h2>
+    <div id="profileList"></div>
+    <div class="row" style="margin-top:14px">
+      <input id="newProfileName" style="flex:1" placeholder="Naam nieuwe persoon">
+      <button onclick="addProfile()">Toevoegen</button>
+    </div>
+    <div class="footer-actions">
+      <button class="secondary" onclick="exportData()">Backup exporteren</button>
+      <button onclick="closeProfiles()">Klaar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY='workout_basis_universal_v1';
+let app = load();
+let activeTab='workout';
+
+function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
+function today(){return new Date().toLocaleDateString('nl-NL')}
+
+function defaultExercises(){
+  return [
+    {id:uid(),name:'Leg press',machine:'63',sets:3,reps:15,weight:36,step:1,note:'Benen • rustig zakken, knieën volgen de voetlijn'},
+    {id:uid(),name:'Leg curl',machine:'62',sets:3,reps:15,weight:0,step:1,note:'Hamstrings • gewicht nog instellen'},
+    {id:uid(),name:'Leg extension',machine:'61',sets:3,reps:15,weight:14,step:1,note:'Bovenbenen • rug goed tegen de leuning'},
+    {id:uid(),name:'Glute',machine:'60',sets:3,reps:15,weight:0,step:1,note:'Billen • gewicht nog instellen'},
+    {id:uid(),name:'Chest press',machine:'67',sets:3,reps:15,weight:18,step:1,note:'Borst • niet overstrekken'},
+    {id:uid(),name:'Pec fly',machine:'66',sets:3,reps:15,weight:0,step:1,note:'Borst • gewicht nog instellen'},
+    {id:uid(),name:'Lat pulldown',machine:'68',sets:3,reps:15,weight:27,step:1,note:'Rug • trek richting bovenborst'},
+    {id:uid(),name:'Seated row',machine:'54',sets:3,reps:15,weight:14,step:1,note:'Rug • borst omhoog, schouders laag'},
+    {id:uid(),name:'Shoulder press',machine:'',sets:3,reps:15,weight:0,step:1,note:'Schouders • gewicht nog instellen'},
+    {id:uid(),name:'Biceps curl',machine:'59',sets:3,reps:15,weight:0,step:1,note:'Armen • gewicht nog instellen'},
+    {id:uid(),name:'Triceps press',machine:'58',sets:3,reps:15,weight:0,step:1,note:'Armen • gewicht nog instellen'},
+    {id:uid(),name:'Ab crunch',machine:'64',sets:3,reps:15,weight:0,step:1,note:'Core • gecontroleerd bewegen'},
+    {id:uid(),name:'Rotary torso',machine:'55',sets:3,reps:15,weight:0,step:1,note:'Core • rustig roteren, niet trekken'},
+    {id:uid(),name:'Back extension',machine:'56',sets:3,reps:10,weight:0,step:1,note:'Onderrug • gecontroleerd, niet overstrekken'},
+    {id:uid(),name:'Knee raise',machine:'Bank',sets:3,reps:10,weight:0,step:1,note:'Core • knieën gecontroleerd heffen'}
+  ];
+}
+function load(){
+  try{
+    const x=JSON.parse(localStorage.getItem(KEY));
+    if(x && x.profiles){
+      Object.values(x.profiles).forEach(p=>{ if(!p.cardio) p.cardio=[]; });
+      return x;
+    }
+  }catch(e){}
+  const id=uid();
+  return {activeProfile:id, session:null, profiles:{
+    [id]:{id,name:'Basisprofiel',exercises:defaultExercises(),cardio:[
+      {id:uid(),type:'Crosstrainer',minutes:10,level:5,calories:0,note:'Warming-up'}
+    ],history:[]}
+  }};
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(app))}
+  catch(e){alert('Opslaan is niet gelukt. Exporteer een backup via Personen voordat je deze pagina sluit.')}
+  render();
+}
+function validateFields(ids){
+  for(const id of ids){const el=document.getElementById(id);if(el.value.trim()==='' || !el.checkValidity() || !Number.isFinite(Number(el.value))){el.reportValidity();alert('Vul een geldige waarde in voor '+(el.getAttribute('aria-label')||el.placeholder)+'.');el.focus();return false}}
+  return true;
+}
+function syncSession(){
+  const p=profile(),s=app.session;
+  if(!s || s.profileId!==p.id)return;
+  s.items=p.exercises.map(e=>s.items.find(x=>x.exerciseId===e.id)||{exerciseId:e.id,name:e.name,sets:e.sets,reps:e.reps,weight:e.weight,completedSets:[]});
+  s.cardio=(p.cardio||[]).map(c=>(s.cardio||[]).find(x=>x.cardioId===c.id)||{cardioId:c.id,type:c.type,minutes:c.minutes,level:c.level,calories:c.calories,note:c.note||''});
+}
+function profile(){return app.profiles[app.activeProfile]}
+
+function render(){
+  syncSession();
+  renderProfileSelect();
+  renderWorkout();
+  renderHistory();
+  document.getElementById('sessionBtn').textContent=app.session && app.session.profileId===app.activeProfile?'Training afronden':'Training starten';
+}
+function renderProfileSelect(){
+  const el=document.getElementById('profileSelect');
+  el.innerHTML=Object.values(app.profiles).map(p=>`<option value="${p.id}" ${p.id===app.activeProfile?'selected':''}>${esc(p.name)}</option>`).join('');
+}
+function lastWeight(exId){
+  const h=profile().history;
+  for(let i=h.length-1;i>=0;i--){
+    const hit=h[i].items.find(x=>x.exerciseId===exId);
+    if(hit) return hit.weight;
+  }
+  return null;
+}
+function currentWeight(ex){
+  const s=app.session && app.session.profileId===app.activeProfile ? app.session.items.find(x=>x.exerciseId===ex.id):null;
+  return s ? s.weight : ex.weight;
+}
+function completedSets(ex){
+  const s=app.session && app.session.profileId===app.activeProfile ? app.session.items.find(x=>x.exerciseId===ex.id):null;
+  return s ? s.completedSets : [];
+}
+function renderWorkout(){
+  const v=document.getElementById('workoutView');
+  const cardioHtml=(profile().cardio||[]).map(c=>{
+    const prev=lastCardio(c.id);
+    const active=app.session && app.session.profileId===app.activeProfile;
+    const cur=active ? app.session.cardio.find(x=>x.cardioId===c.id) : c;
+    return `<div class="card cardio-card">
+      <div class="cardio-title">
+        <div>
+          <h3 style="margin:0">${esc(c.type)}</h3>
+          <div class="meta">${c.note?esc(c.note):'Cardio / warming-up'}</div>
+        </div>
+        <button class="danger small" onclick="removeCardio('${c.id}')">Verwijder</button>
+      </div>
+      <div class="cardio-grid">
+        <div class="cardio-field">
+          <div class="label">Minuten</div>
+          <input type="number" min="1" aria-label="Minuten ${esc(c.type)}" value="${cur.minutes}" ${!active?'disabled':''} onchange="setCardio('${c.id}','minutes',this.value)">
+          <div class="meta">Vorige keer: ${prev?prev.minutes+' min':'—'}</div>
+        </div>
+        <div class="cardio-field">
+          <div class="label">Zwaarte / niveau</div>
+          <input type="number" min="0" step="1" aria-label="Zwaarte / niveau ${esc(c.type)}" value="${cur.level}" ${!active?'disabled':''} onchange="setCardio('${c.id}','level',this.value)">
+          <div class="meta">Vorige keer: ${prev?prev.level:'—'}</div>
+        </div>
+        <div class="cardio-field">
+          <div class="label">Calorieën verbrand</div>
+          <input type="number" min="0" step="1" aria-label="Calorieën ${esc(c.type)}" value="${cur.calories}" ${!active?'disabled':''} onchange="setCardio('${c.id}','calories',this.value)">
+          <div class="meta">Vorige keer: ${prev?prev.calories+' kcal':'—'}</div>
+        </div>
+      </div>
+    </div>`
+  }).join('');
+
+  const exHtml=profile().exercises.map(ex=>{
+    const prev=lastWeight(ex.id), cur=currentWeight(ex), done=completedSets(ex);
+    const active=app.session && app.session.profileId===app.activeProfile;
+    return `<div class="card exercise">
+      <div class="exercise-top">
+        <div>
+          <h3>${esc(ex.name)}</h3>
+          <div class="meta">${ex.machine?`Toestel ${esc(ex.machine)} • `:''}${ex.sets} × ${ex.reps}</div>
+          ${ex.note?`<div class="note">Let op: ${esc(ex.note)}</div>`:''}
+        </div>
+        <button class="danger small" onclick="removeExercise('${ex.id}')">Verwijder</button>
+      </div>
+      <div class="weight-grid">
+        <div class="metric">
+          <div class="label">Vorige keer</div>
+          <div class="value">${prev===null?'—':fmt(prev)+' kg'}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Vandaag</div>
+          <div class="weight-edit">
+            <button class="secondary" ${!active?'disabled':''} aria-label="Gewicht verlagen" onclick="changeWeight('${ex.id}',-${ex.step})">−</button>
+            <input class="weight-input" type="number" min="0" aria-label="Gewicht ${esc(ex.name)} in kg" step="0.5" value="${cur}" ${!active?'disabled':''} onchange="setWeight('${ex.id}',this.value)">
+            <button class="secondary" ${!active?'disabled':''} aria-label="Gewicht verhogen" onclick="changeWeight('${ex.id}',${ex.step})">+</button>
+          </div>
+        </div>
+      </div>
+      ${active?`<div class="sets">${Array.from({length:ex.sets},(_,i)=>`<button class="setbtn ${done.includes(i+1)?'done':''}" onclick="toggleSet('${ex.id}',${i+1})">Set ${i+1}</button>`).join('')}</div>`:''}
+    </div>`
+  }).join('');
+  v.innerHTML=cardioHtml+exHtml || '<div class="card empty">Nog geen cardio of oefeningen toegevoegd.</div>';
+}
+function renderHistory(){
+  const v=document.getElementById('historyView'), h=[...profile().history].reverse();
+  if(!h.length){v.innerHTML='<div class="card empty">Nog geen afgeronde trainingen.</div>';return}
+  v.innerHTML=h.map(s=>`<div class="card" style="margin-bottom:12px">
+    <div class="exercise-top"><div><h3 style="margin:0">${esc(s.date)}</h3><div class="meta">${s.items.length} oefeningen</div></div><span class="badge">opgeslagen</span></div>
+    ${(s.cardio||[]).map(c=>`<div class="history-item"><span>${esc(c.type)}</span><strong>${c.minutes} min • niveau ${c.level} • ${c.calories} kcal</strong></div>`).join('')}
+    ${s.items.map(i=>`<div class="history-item"><span>${esc(i.name)}</span><strong>${fmt(i.weight)} kg • ${Array.isArray(i.completedSets)?i.completedSets.length:i.completedSets}/${i.sets} sets</strong></div>`).join('')}
+  </div>`).join('');
+}
+function startOrFinish(){
+  const p=profile();
+  if(app.session && app.session.profileId===p.id){
+    const s=app.session;
+    p.history.push({date:today(),timestamp:Date.now(),cardio:(s.cardio||[]).map(x=>({...x})),items:s.items.map(x=>({...x}))});
+    (s.cardio||[]).forEach(item=>{
+      const c=(p.cardio||[]).find(x=>x.id===item.cardioId);
+      if(c){ c.minutes=item.minutes; c.level=item.level; c.calories=item.calories; }
+    });
+    s.items.forEach(item=>{
+      const ex=p.exercises.find(e=>e.id===item.exerciseId);
+      if(ex) ex.weight=item.weight;
+    });
+    app.session=null; save(); return;
+  }
+  if(app.session){alert('Rond eerst de lopende training van '+app.profiles[app.session.profileId].name+' af. Je kunt via Personen teruggaan.');return}
+  app.session={profileId:p.id,started:Date.now(),cardio:(p.cardio||[]).map(c=>({
+    cardioId:c.id,type:c.type,minutes:c.minutes,level:c.level,calories:c.calories,note:c.note||''
+  })),items:p.exercises.map(e=>({
+    exerciseId:e.id,name:e.name,sets:e.sets,reps:e.reps,weight:e.weight,completedSets:[]
+  }))};
+  save();
+}
+function changeWeight(id,delta){
+  const it=app.session?.items.find(x=>x.exerciseId===id); if(!it)return;
+  it.weight=Math.max(0,Math.round((Number(it.weight)+delta)*2)/2); save();
+}
+function setWeight(id,val){
+  const it=app.session?.items.find(x=>x.exerciseId===id); if(!it)return;
+  if(val.trim()==='' || !Number.isFinite(Number(val)) || Number(val)<0){alert('Vul een geldig gewicht van 0 kg of meer in.');render();return}
+  it.weight=Number(val); save();
+}
+function toggleSet(id,n){
+  const it=app.session?.items.find(x=>x.exerciseId===id); if(!it)return;
+  it.completedSets=it.completedSets.includes(n)?it.completedSets.filter(x=>x!==n):[...it.completedSets,n].sort();
+  save();
+}
+function openExercise(){document.getElementById('exerciseModal').style.display='flex'}
+function closeExercise(){document.getElementById('exerciseModal').style.display='none'}
+function addExercise(){
+  if(!validateFields(['exSets','exReps','exWeight','exStep']))return;
+  const name=document.getElementById('exName').value.trim(); if(!name)return alert('Vul een naam in.');
+  profile().exercises.push({
+    id:uid(),name,machine:document.getElementById('exMachine').value.trim(),
+    sets:+document.getElementById('exSets').value||3,reps:+document.getElementById('exReps').value||15,
+    weight:+document.getElementById('exWeight').value||0,step:+document.getElementById('exStep').value||1,
+    note:document.getElementById('exNote').value.trim()
+  });
+  ['exName','exMachine','exNote'].forEach(id=>document.getElementById(id).value='');
+  closeExercise(); save();
+}
+function removeExercise(id){
+  if(!confirm('Deze oefening uit het schema verwijderen? De oude historie blijft bewaard.'))return;
+  profile().exercises=profile().exercises.filter(e=>e.id!==id); save();
+}
+
+function lastCardio(cardioId){
+  const h=profile().history;
+  for(let i=h.length-1;i>=0;i--){
+    const hit=(h[i].cardio||[]).find(x=>x.cardioId===cardioId);
+    if(hit) return hit;
+  }
+  return null;
+}
+function setCardio(id,field,val){
+  const it=app.session?.cardio?.find(x=>x.cardioId===id); if(!it)return;
+  const minimum=field==='minutes'?1:0;
+  if(val.trim()==='' || !Number.isFinite(Number(val)) || Number(val)<minimum || !Number.isInteger(Number(val))){alert('Vul een geldig heel getal van '+minimum+' of meer in.');render();return}
+  it[field]=Number(val); save();
+}
+function openCardio(){document.getElementById('cardioModal').style.display='flex'}
+function closeCardio(){document.getElementById('cardioModal').style.display='none'}
+function addCardio(){
+  if(!validateFields(['cardioMinutes','cardioLevel','cardioCalories']))return;
+  const type=document.getElementById('cardioType').value;
+  profile().cardio=profile().cardio||[];
+  profile().cardio.push({
+    id:uid(),type,
+    minutes:+document.getElementById('cardioMinutes').value||10,
+    level:+document.getElementById('cardioLevel').value||0,
+    calories:+document.getElementById('cardioCalories').value||0,
+    note:document.getElementById('cardioNote').value.trim()
+  });
+  closeCardio(); save();
+}
+function removeCardio(id){
+  if(!confirm('Deze cardio-oefening uit het schema verwijderen? De oude historie blijft bewaard.'))return;
+  profile().cardio=(profile().cardio||[]).filter(c=>c.id!==id); save();
+}
+
+function openProfiles(){renderProfiles();document.getElementById('profilesModal').style.display='flex'}
+function closeProfiles(){document.getElementById('profilesModal').style.display='none'}
+function renderProfiles(){
+  document.getElementById('profileList').innerHTML=Object.values(app.profiles).map(p=>
+    `<div class="history-item"><span>${esc(p.name)}</span><div class="row">
+      <button class="secondary small" onclick="duplicateProfile('${p.id}')">Kopie</button>
+      ${Object.keys(app.profiles).length>1?`<button class="danger small" onclick="deleteProfile('${p.id}')">Verwijder</button>`:''}
+    </div></div>`).join('');
+}
+function addProfile(){
+  const n=document.getElementById('newProfileName').value.trim(); if(!n)return;
+  const id=uid(); app.profiles[id]={id,name:n,exercises:defaultExercises(),cardio:[
+    {id:uid(),type:'Crosstrainer',minutes:10,level:5,calories:0,note:'Warming-up'}
+  ],history:[]}; app.activeProfile=id;
+  document.getElementById('newProfileName').value=''; save(); renderProfiles();
+}
+function duplicateProfile(id){
+  const src=app.profiles[id], nid=uid();
+  app.profiles[nid]={id:nid,name:src.name+' kopie',
+    exercises:src.exercises.map(e=>({...e,id:uid()})),
+    cardio:(src.cardio||[]).map(c=>({...c,id:uid()})),
+    history:[]};
+  app.activeProfile=nid; save(); renderProfiles();
+}
+function deleteProfile(id){
+  if(!confirm('Persoon verwijderen inclusief eigen trainingshistorie?'))return;
+  delete app.profiles[id];
+  if(app.activeProfile===id) app.activeProfile=Object.keys(app.profiles)[0];
+  if(app.session?.profileId===id) app.session=null;
+  save(); renderProfiles();
+}
+function switchProfile(id){
+  app.activeProfile=id;
+  // Keep the other person's unfinished training until they return.
+  save();
+}
+function showTab(t){
+  activeTab=t;
+  document.getElementById('workoutView').style.display=t==='workout'?'block':'none';
+  document.getElementById('historyView').style.display=t==='history'?'block':'none';
+  document.getElementById('tabWorkout').className='tab '+(t==='workout'?'active':'secondary');
+  document.getElementById('tabHistory').className='tab '+(t==='history'?'active':'secondary');
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(app,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='workout-backup.json';a.click();URL.revokeObjectURL(a.href);
+}
+function fmt(n){return Number(n).toLocaleString('nl-NL',{maximumFractionDigits:1})}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+document.querySelectorAll('input[placeholder]').forEach(el=>el.setAttribute('aria-label',el.placeholder));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeExercise();closeCardio();closeProfiles()}});
+render();
+</script>
+</body>
+</html>
