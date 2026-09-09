@@ -90,6 +90,7 @@ button{min-height:44px}
 }
 
 .builder-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.builder-grid button{min-height:56px;text-align:left}.builder-grid button[aria-pressed="true"],.time-choice[aria-pressed="true"]{outline:2px solid #f5f7fa;background:#344050;color:white}.proposal-item{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.proposal-item span{flex:1}.builder-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.builder-actions button{flex:1;min-width:120px}.builder-help{color:var(--muted);font-size:.9rem;line-height:1.5}.time-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.time-row button{padding:12px 4px}.builder-grid+label{display:block;margin-top:14px}
+.order-buttons{display:flex;flex-wrap:wrap;gap:4px;max-width:108px}.order-buttons button{min-width:44px;min-height:44px}.library-filters{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.library-filters button[aria-pressed="true"]{outline:2px solid white}.library-option{display:flex;align-items:center;gap:12px;min-height:60px;border-bottom:1px solid var(--line);padding:10px 0}.library-option input{appearance:auto;-webkit-appearance:checkbox;width:24px;height:24px;flex-shrink:0}.selection-footer{position:sticky;bottom:0;background:#171a21;border-top:1px solid var(--line);padding:12px 0;display:grid;gap:10px}.selection-footer strong{font-size:.9rem}
 </style>
 </head>
 <body>
@@ -512,6 +513,7 @@ function syncSession(){
 function profile(){return app.profiles[app.activeProfile]}
 
 function workoutTypes(){return [
+  {id:'custom',name:'Zelf samenstellen',groups:[]},
   {id:'base',name:'Vast basisschema',groups:[]},
   {id:'total',name:'Total Body',groups:['Benen','Hamstrings','Borst','Rug','Schouders','Core','Billen','Biceps','Triceps']},
   {id:'upper',name:'Bovenlichaam',groups:['Borst','Rug','Schouders','Biceps','Triceps','Core']},
@@ -531,7 +533,8 @@ function makeProposal(settings,p=profile()){
   const cardioIds=settings.warmup && p.cardio.length?[p.cardio[0].id]:[];
   const candidates=p.exercises.filter(e=>type.id==='base' || type.groups.includes(e.primaryMuscle));
   let chosen=[];
-  if(type.id==='base')chosen=[...candidates];
+  if(type.id==='custom')chosen=[];
+  else if(type.id==='base')chosen=[...candidates];
   else{
     const rotation=settings.variation||0;
     const buckets=type.groups.map(group=>{
@@ -550,7 +553,15 @@ function makeProposal(settings,p=profile()){
 }
 function setBuilder(field,value){
   const settings={...builderSettings(),[field]:value,variation:0};
-  profile().builderSettings=settings;profile().workoutProposal=null;save();
+  profile().builderSettings=settings;
+  if(field==='type' && value==='custom'){
+    profile().workoutProposal={...makeProposal(settings),editing:true,filter:'Alles'};
+  }else if(profile().workoutProposal?.editing && field!=='type'){
+    const draft=profile().workoutProposal;draft.minutes=settings.minutes;
+    draft.cardioIds=settings.warmup && profile().cardio.length?[profile().cardio[0].id]:[];
+    draft.estimatedMinutes=proposalMinutes(draft.exerciseIds,draft.cardioIds);
+  }else profile().workoutProposal=null;
+  save();
 }
 function previewWorkout(another=false){
   const settings={...builderSettings()};
@@ -565,27 +576,61 @@ function startProposal(){
   const draft=profile().workoutProposal;if(!draft)return;
   startOrFinish(draft);
 }
+function editProposal(){
+  const draft=profile().workoutProposal;if(!draft)return;
+  draft.editing=true;draft.filter=draft.filter||'Alles';save();
+}
+function setLibraryFilter(filter){
+  if(!['Alles','Benen','Rug','Borst','Schouders','Armen','Core'].includes(filter))return;
+  const draft=profile().workoutProposal;if(!draft)return;
+  draft.filter=filter;save();
+}
+function filteredLibrary(filter,p=profile()){
+  const groups=filter==='Benen'?['Benen','Billen','Hamstrings']:filter==='Armen'?['Biceps','Triceps']:[filter];
+  return exerciseLibrary(p).filter(e=>!e.archived && (filter==='Alles' || groups.includes(e.primaryMuscle)));
+}
+function toggleProposalExercise(id){
+  const draft=profile().workoutProposal;if(!draft || !profile().exercises.some(e=>e.id===id))return;
+  draft.exerciseIds=draft.exerciseIds.includes(id)?draft.exerciseIds.filter(x=>x!==id):[...draft.exerciseIds,id];
+  draft.estimatedMinutes=proposalMinutes(draft.exerciseIds,draft.cardioIds);save();
+}
+function moveProposalExercise(id,direction){
+  const draft=profile().workoutProposal;if(!draft || ![-1,1].includes(direction))return;
+  const index=draft.exerciseIds.indexOf(id),next=index+direction;
+  if(index<0 || next<0 || next>=draft.exerciseIds.length)return;
+  [draft.exerciseIds[index],draft.exerciseIds[next]]=[draft.exerciseIds[next],draft.exerciseIds[index]];save();
+}
+function renderLibraryPicker(draft){
+  return `<div style="margin-top:20px"><h3>Oefeningen toevoegen</h3><p class="builder-help">Vink oefeningen aan. Verwijderen uit deze workout verandert je basisschema niet.</p>
+    <div class="library-filters">${['Alles','Benen','Rug','Borst','Schouders','Armen','Core'].map(f=>`<button class="secondary small" aria-pressed="${(draft.filter||'Alles')===f}" onclick="setLibraryFilter('${f}')">${f}</button>`).join('')}</div>
+    ${filteredLibrary(draft.filter||'Alles').map(e=>`<label class="library-option"><input type="checkbox" ${draft.exerciseIds.includes(e.id)?'checked':''} onchange="toggleProposalExercise('${e.id}')"><span>${esc(e.name)}<br><small class="builder-help">${esc(e.primaryMuscle||'Nog niet ingedeeld')} • ${e.sets} × ${e.reps}${e.lastUsedWeight===null?'':` • vorige keer ${fmt(e.lastUsedWeight)} kg`}</small></span></label>`).join('')||'<p>Geen oefeningen voor dit filter. Kies Alles of voeg een oefening toe.</p>'}
+    <button class="secondary" style="margin-top:12px" onclick="openExercise()">Nieuwe oefening toevoegen</button>
+  </div>`;
+}
+
 function renderBuilder(){
   const settings=builderSettings(),draft=profile().workoutProposal,p=profile();
-  const types=workoutTypes();
+  const types=workoutTypes().filter(t=>t.id!=='custom').concat(workoutTypes().filter(t=>t.id==='custom'));
   const selected=types.find(t=>t.id===settings.type)||types[1];
   document.getElementById('builderView').innerHTML=`<div class="card">
     <h2 style="margin:0">Wat wil je vandaag trainen?</h2>
     <p class="builder-help">Voor ${esc(p.name)}. Je basisschema en eerdere trainingen blijven bewaard.</p>
-    <div class="builder-grid">${types.map(t=>`<button class="secondary" aria-pressed="${settings.type===t.id}" onclick="setBuilder('type','${t.id}')">${esc(t.name)}</button>`).join('')}<button class="secondary" disabled>Zelf samenstellen — binnenkort</button></div>
+    <div class="builder-grid">${types.map(t=>`<button class="secondary" aria-pressed="${settings.type===t.id}" onclick="setBuilder('type','${t.id}')">${esc(t.name)}</button>`).join('')}</div>
     <h3>Hoeveel tijd heb je?</h3>
     <div class="time-row">${[30,45,60,90].map(n=>`<button class="secondary time-choice" aria-pressed="${settings.minutes===n}" onclick="setBuilder('minutes',${n})">${n} min</button>`).join('')}</div>
     <div class="builder-actions"><button class="secondary" aria-pressed="${!!settings.warmup}" onclick="setBuilder('warmup',${!settings.warmup})">Warming-up: ${settings.warmup?'aan':'uit'}</button></div>
     <p class="builder-help">${p.cardio.length?`Warming-up: ${esc(p.cardio[0].type)}, ${p.cardio[0].minutes} minuten. Aanpassen kan bij Training.`:'Voeg via + Cardio een warming-up toe.'} De tijd is een schatting inclusief sets, rust en wisselen van toestel.</p>
-    <button onclick="previewWorkout()">Bekijk voorstel</button>
+    <button onclick="previewWorkout()" ${settings.type==='custom'?'style="display:none"':''}>Bekijk voorstel</button>
   </div>${draft?`<div class="card" style="margin-top:14px"><h2>Voorstel: ${esc(draft.name)}</h2>
-    <p>${draft.exerciseIds.length} oefeningen • ±${draft.estimatedMinutes} minuten</p>
-    ${draft.estimatedMinutes>draft.minutes?'<p class="builder-help">Je vaste basisschema is langer dan de gekozen tijd. Alle oefeningen blijven behouden.</p>':''}
+    <p>${draft.exerciseIds.length} oefeningen • ±${proposalMinutes(draft.exerciseIds,draft.cardioIds)} minuten</p>
+    ${proposalMinutes(draft.exerciseIds,draft.cardioIds)>draft.minutes?'<p class="builder-help">Dit voorstel duurt langer dan je gekozen tijd. Je selectie blijft behouden; verwijder oefeningen of kies meer tijd.</p>':''}
     ${draft.sameAsPrevious?'<p role="status">Er zijn binnen deze keuze en tijd geen andere oefeningen beschikbaar.</p>':''}
     ${draft.cardioIds.map(id=>{const c=p.cardio.find(c=>c.id===id);return c?`<div class="proposal-item"><span>Warming-up: ${esc(c.type)}</span><strong>${c.minutes} min</strong></div>`:''}).join('')}
-    ${draft.exerciseIds.map((id,i)=>{const e=p.exercises.find(e=>e.id===id);return e?`<div class="proposal-item"><strong>${i+1}</strong><span>${esc(e.name)}<br><small class="builder-help">${esc(e.primaryMuscle||'Nog niet ingedeeld')} • ${e.sets} × ${e.reps}</small></span></div>`:'<p>Een oefening is verwijderd. Maak een nieuw voorstel.</p>'}).join('')}
+    ${draft.exerciseIds.map((id,i)=>{const e=p.exercises.find(e=>e.id===id);return e?`<div class="proposal-item"><strong>${i+1}</strong><span>${esc(e.name)}<br><small class="builder-help">${esc(e.primaryMuscle||'Nog niet ingedeeld')} • ${e.sets} × ${e.reps}</small></span>${draft.editing?`<div class="order-buttons"><button class="secondary small" aria-label="${esc(e.name)} omhoog" onclick="moveProposalExercise('${e.id}',-1)" ${i===0?'disabled':''}>↑</button><button class="secondary small" aria-label="${esc(e.name)} omlaag" onclick="moveProposalExercise('${e.id}',1)" ${i===draft.exerciseIds.length-1?'disabled':''}>↓</button><button class="danger small" aria-label="${esc(e.name)} uit workout verwijderen" onclick="toggleProposalExercise('${e.id}')">×</button></div>`:''}</div>`:'<p>Een oefening is verwijderd. Maak een nieuw voorstel.</p>'}).join('')}
     ${!draft.exerciseIds.length?'<p role="status">Geen passende oefeningen binnen deze tijd. Kies meer tijd, zet de warming-up uit of voeg oefeningen toe.</p>':''}
-    <div class="builder-actions"><button class="secondary" onclick="previewWorkout(true)" ${selected.id==='base'?'disabled':''}>Andere workout</button><button class="secondary" disabled>Aanpassen — binnenkort</button><button onclick="startProposal()" ${!draft.exerciseIds.length?'disabled':''}>Start training</button></div>
+    ${draft.editing?renderLibraryPicker(draft):''}
+    <div class="builder-actions"><button class="secondary" onclick="previewWorkout(true)" ${['base','custom'].includes(selected.id)?'disabled':''}>Andere workout</button><button class="secondary" onclick="editProposal()">Aanpassen</button><button onclick="startProposal()" ${!draft.exerciseIds.length?'disabled':''}>Start training</button></div>
+    ${draft.editing?`<div class="selection-footer"><strong>${draft.exerciseIds.length} oefeningen geselecteerd • ±${proposalMinutes(draft.exerciseIds,draft.cardioIds)} minuten</strong><button onclick="startProposal()" ${!draft.exerciseIds.length?'disabled':''}>START WORKOUT</button></div>`:''}
   </div>`:''}`;
 }
 

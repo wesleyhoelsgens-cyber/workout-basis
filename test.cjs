@@ -3,6 +3,24 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const script=fs.readFileSync(__dirname+'/index.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+test('custom workout selection survives filters, time change and reload',()=>{
+  const t=setup();t.run('setBuilder("type","custom");toggleProposalExercise(profile().exercises[0].id);toggleProposalExercise(profile().exercises[6].id);setLibraryFilter("Rug");setBuilder("minutes",45)');
+  const ids=t.run('JSON.stringify(profile().workoutProposal.exerciseIds)');assert.equal(t.run('profile().workoutProposal.exerciseIds.length'),2);
+  const r=setup(t.stored());assert.equal(r.run('JSON.stringify(profile().workoutProposal.exerciseIds)'),ids);assert.equal(r.run('profile().workoutProposal.filter'),'Rug');assert.equal(r.run('profile().workoutProposal.minutes'),45);
+});
+test('editor removal and ordering never change the base or history',()=>{
+  const t=setup();const before=t.run('JSON.stringify([profile().exercises,profile().history])');
+  t.run('setBuilder("type","custom");toggleProposalExercise(profile().exercises[0].id);toggleProposalExercise(profile().exercises[1].id);moveProposalExercise(profile().exercises[1].id,-1)');
+  assert.equal(t.run('profile().workoutProposal.exerciseIds[0]===profile().exercises[1].id'),true);
+  t.run('toggleProposalExercise(profile().exercises[0].id)');assert.equal(t.run('profile().workoutProposal.exerciseIds.length'),1);assert.equal(t.run('JSON.stringify([profile().exercises,profile().history])'),before);
+});
+test('leg and arm filters include related muscle labels without duplicates',()=>{
+  const t=setup();assert.equal(t.run('filteredLibrary("Benen").length'),4);assert.equal(t.run('filteredLibrary("Armen").length'),2);assert.equal(t.run('filteredLibrary("Alles").length'),15);
+});
+test('custom order carries into the tracker and empty workouts cannot start',()=>{
+  const t=setup();t.run('setBuilder("type","custom");startProposal()');assert.equal(t.run('app.session'),null);
+  t.run('toggleProposalExercise(profile().exercises[6].id);toggleProposalExercise(profile().exercises[0].id);startProposal()');assert.equal(t.run('app.session.items[0].name'),'Lat pulldown');assert.equal(t.run('app.session.items[1].name'),'Leg press');
+});
 test('automatic proposals fit all time budgets and muscle groups without duplicates',()=>{
   const t=setup();
   for(const type of ['total','upper','lower','back','chest','legs'])for(const minutes of [30,45,60,90]){

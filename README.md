@@ -1,5 +1,15 @@
 # Workout Basis
 
+## V2 voortgang — fases 3 en 4
+
+De ontwikkeltak bevat nu Vandaag met acht workoutkeuzes en 30/45/60/90 minuten. Automatische voorstellen wisselen primaire spiergroepen af en schatten per set twee minuten plus één minuut toestelwissel per oefening. Warming-up gebruikt voorlopig het eerste persoonlijke cardio-item en is uitschakelbaar. Het vaste basisschema wordt nooit ingekort; bij overschrijding verschijnt een melding. Andere workout varieert binnen de beschikbare oefeningen.
+
+Zelf samenstellen en Aanpassen bieden de filters Alles, Benen (inclusief Billen/Hamstrings), Rug, Borst, Schouders, Armen (Biceps/Triceps) en Core. Selectie, volgorde en filter worden per persoon lokaal bewaard. Verwijderen uit een voorstel verandert het basisschema niet. De selectie kan met omhoog/omlaagknoppen worden geordend. Onderaan staan het aantal oefeningen, de tijdsinschatting en START WORKOUT.
+
+De minimale koppeling aan de tracker gebruikt stabiele oefening-ID's en de gekozen volgorde. Verdere integratie, waaronder beheer tijdens een lopende samengestelde training, volgt in fase 5. Mobiele afwerking en Safari/Edge-controles volgen in fase 6. Deze ontwikkelfases zijn nog niet openbaar gepubliceerd.
+
+Fase 3: 21 tests geslaagd en Rug + Biceps / 30 minuten in de browser gestart en afgerond. Fase 4: 25 tests geslaagd, inclusief behoud van selectie bij filters/tijdwijziging/herladen en ongewijzigd basisschema. In de browser Leg press en Lat pulldown geselecteerd, gefilterd, omgewisseld, herladen en in de gekozen volgorde gestart; geen consolefouten.
+
 ## V2 in ontwikkeling — fase 2
 
 De ontwikkeltak `codex/workout-v2` voegt centrale oefeningdefinities, spiergroeplabels en dataversie 2 toe aan de bestaande app. De Workout Builder is nog niet toegevoegd. De openbare website gebruikt voorlopig V1.
