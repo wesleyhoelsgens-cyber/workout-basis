@@ -1,5 +1,13 @@
 # Workout Basis
 
+## V2 voortgang — fase 5
+
+De tracker en historie zijn gekoppeld aan workoutselecties via de bestaande oefening-ID's. Een gewicht uit een rugtraining wordt opnieuw gebruikt in Total Body. Afgeronde trainingen tonen hun workoutnaam en openen meteen de historie. Afgevinkte sets worden als zelfstandige kopie in de historie opgeslagen.
+
+Tijdens een samengestelde training verwijdert de verwijderknop alleen uit die training; het persoonlijke basisschema en cardio-instellingen blijven behouden. Nieuwe oefeningen/cardio die tijdens zo'n training worden aangemaakt, worden ook aan de actieve selectie toegevoegd. De bestaande V1-route voor het volledige basisschema behoudt het oorspronkelijke beheer. De builder laat een persoonlijk cardio-item als warming-up kiezen en biedt Training hervatten als een training loopt. Hervatten schakelt naar de juiste persoon.
+
+Fase 5: alle 30 tests geslaagd. Extra controles: gedeelde gewichten tussen workouttypes, toevoegen/verwijderen tijdens een samengestelde training, cardioselectie, verdwenen warming-up en hervatten bij een andere persoon. Browsertest: Lat pulldown op 52,5 kg met één set afgerond; historie direct zichtbaar en een daaropvolgende Total Body-training gebruikt 52,5 kg. Geen consolefouten. Fase 6 en publicatie volgen nog.
+
 ## V2 voortgang — fases 3 en 4
 
 De ontwikkeltak bevat nu Vandaag met acht workoutkeuzes en 30/45/60/90 minuten. Automatische voorstellen wisselen primaire spiergroepen af en schatten per set twee minuten plus één minuut toestelwissel per oefening. Warming-up gebruikt voorlopig het eerste persoonlijke cardio-item en is uitschakelbaar. Het vaste basisschema wordt nooit ingekort; bij overschrijding verschijnt een melding. Andere workout varieert binnen de beschikbare oefeningen.

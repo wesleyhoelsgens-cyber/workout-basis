@@ -3,6 +3,30 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const script=fs.readFileSync(__dirname+'/index.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+test('Lat pulldown shares weight history across back and total-body workouts',()=>{
+  const t=setup();t.run('setBuilder("type","back");previewWorkout();startProposal();globalThis.lat=profile().exercises.find(e=>e.name==="Lat pulldown").id;setWeight(lat,"52,5");toggleSet(lat,1);startOrFinish();setBuilder("type","total");previewWorkout();startProposal()');
+  assert.equal(t.run('lastWeight(lat)'),52.5);assert.equal(t.run('app.session.items.find(e=>e.exerciseId===lat).weight'),52.5);assert.equal(t.run('profile().history[0].workoutName'),'Rug + Biceps');
+});
+test('removing items during a built workout preserves base exercises and cardio',()=>{
+  const t=setup();t.run('previewWorkout();startProposal()');const before=t.run('JSON.stringify([profile().exercises,profile().cardio,profile().history])');
+  t.run('removeExercise(app.session.items[0].exerciseId);removeCardio(app.session.cardio[0].cardioId)');
+  assert.equal(t.run('JSON.stringify([profile().exercises,profile().cardio,profile().history])'),before);assert.equal(t.run('app.session.cardio.length'),0);
+  const r=setup(t.stored());assert.equal(r.run('app.session.cardio.length'),0);assert.equal(r.run('app.session.items.length'),6);
+});
+test('new exercises and cardio added during a built workout join that session',()=>{
+  const t=setup();t.run('previewWorkout();startProposal()');
+  for(const [id,value] of Object.entries({exName:'Test',exSets:'3',exReps:'10',exWeight:'5',exStep:'1',exMachine:'',exNote:'',cardioType:'Roeimachine',cardioMinutes:'5',cardioLevel:'2',cardioCalories:'40',cardioNote:''}))t.run(`document.getElementById('${id}').value=${JSON.stringify(value)}`);
+  t.run('addExercise();addCardio()');assert.equal(t.run('app.session.items.at(-1).name'),'Test');assert.equal(t.run('app.session.cardio.at(-1).type'),'Roeimachine');
+  t.run('startOrFinish()');assert.equal(t.run('profile().history[0].items.at(-1).name'),'Test');assert.equal(t.run('profile().history[0].cardio.at(-1).calories'),40);
+});
+test('warmup selection uses the chosen cardio and invalid stale choices cannot start',()=>{
+  const t=setup();t.run('profile().cardio.push({id:"row",type:"Roeimachine",minutes:5,level:2,calories:0});setBuilder("cardioId","row");previewWorkout();startProposal()');assert.equal(t.run('app.session.cardio[0].type'),'Roeimachine');
+  t.run('startOrFinish();previewWorkout();profile().cardio=profile().cardio.filter(c=>c.id!=="row");startProposal()');assert.equal(t.run('app.session'),null);assert.equal(t.alerts.length,1);
+});
+test('resume restores correct person and selections without cross-profile set changes',()=>{
+  const t=setup();t.run('previewWorkout();startProposal();globalThis.owner=app.activeProfile;globalThis.firstId=app.session.items[0].exerciseId;document.getElementById("newProfileName").value="Tweede";addProfile();toggleSet(firstId,1)');assert.equal(t.run('app.session.items[0].completedSets.length'),0);
+  t.run('resumeTraining()');assert.equal(t.run('app.activeProfile===owner'),true);assert.equal(t.run('activeTab'),'workout');
+});
 test('custom workout selection survives filters, time change and reload',()=>{
   const t=setup();t.run('setBuilder("type","custom");toggleProposalExercise(profile().exercises[0].id);toggleProposalExercise(profile().exercises[6].id);setLibraryFilter("Rug");setBuilder("minutes",45)');
   const ids=t.run('JSON.stringify(profile().workoutProposal.exerciseIds)');assert.equal(t.run('profile().workoutProposal.exerciseIds.length'),2);
