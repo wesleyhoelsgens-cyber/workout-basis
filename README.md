@@ -1,47 +1,29 @@
-# Workout Basis
-
-## V2 voortgang — fase 5
-
-De tracker en historie zijn gekoppeld aan workoutselecties via de bestaande oefening-ID's. Een gewicht uit een rugtraining wordt opnieuw gebruikt in Total Body. Afgeronde trainingen tonen hun workoutnaam en openen meteen de historie. Afgevinkte sets worden als zelfstandige kopie in de historie opgeslagen.
-
-Tijdens een samengestelde training verwijdert de verwijderknop alleen uit die training; het persoonlijke basisschema en cardio-instellingen blijven behouden. Nieuwe oefeningen/cardio die tijdens zo'n training worden aangemaakt, worden ook aan de actieve selectie toegevoegd. De bestaande V1-route voor het volledige basisschema behoudt het oorspronkelijke beheer. De builder laat een persoonlijk cardio-item als warming-up kiezen en biedt Training hervatten als een training loopt. Hervatten schakelt naar de juiste persoon.
-
-Fase 5: alle 30 tests geslaagd. Extra controles: gedeelde gewichten tussen workouttypes, toevoegen/verwijderen tijdens een samengestelde training, cardioselectie, verdwenen warming-up en hervatten bij een andere persoon. Browsertest: Lat pulldown op 52,5 kg met één set afgerond; historie direct zichtbaar en een daaropvolgende Total Body-training gebruikt 52,5 kg. Geen consolefouten. Fase 6 en publicatie volgen nog.
-
-## V2 voortgang — fases 3 en 4
-
-De ontwikkeltak bevat nu Vandaag met acht workoutkeuzes en 30/45/60/90 minuten. Automatische voorstellen wisselen primaire spiergroepen af en schatten per set twee minuten plus één minuut toestelwissel per oefening. Warming-up gebruikt voorlopig het eerste persoonlijke cardio-item en is uitschakelbaar. Het vaste basisschema wordt nooit ingekort; bij overschrijding verschijnt een melding. Andere workout varieert binnen de beschikbare oefeningen.
-
-Zelf samenstellen en Aanpassen bieden de filters Alles, Benen (inclusief Billen/Hamstrings), Rug, Borst, Schouders, Armen (Biceps/Triceps) en Core. Selectie, volgorde en filter worden per persoon lokaal bewaard. Verwijderen uit een voorstel verandert het basisschema niet. De selectie kan met omhoog/omlaagknoppen worden geordend. Onderaan staan het aantal oefeningen, de tijdsinschatting en START WORKOUT.
-
-De minimale koppeling aan de tracker gebruikt stabiele oefening-ID's en de gekozen volgorde. Verdere integratie, waaronder beheer tijdens een lopende samengestelde training, volgt in fase 5. Mobiele afwerking en Safari/Edge-controles volgen in fase 6. Deze ontwikkelfases zijn nog niet openbaar gepubliceerd.
-
-Fase 3: 21 tests geslaagd en Rug + Biceps / 30 minuten in de browser gestart en afgerond. Fase 4: 25 tests geslaagd, inclusief behoud van selectie bij filters/tijdwijziging/herladen en ongewijzigd basisschema. In de browser Leg press en Lat pulldown geselecteerd, gefilterd, omgewisseld, herladen en in de gekozen volgorde gestart; geen consolefouten.
-
-## V2 in ontwikkeling — fase 2
-
-De ontwikkeltak `codex/workout-v2` voegt centrale oefeningdefinities, spiergroeplabels en dataversie 2 toe aan de bestaande app. De Workout Builder is nog niet toegevoegd. De openbare website gebruikt voorlopig V1.
-
-De bestaande opslagsleutel blijft `workout_basis_universal_v1`; `schemaVersion: 2` markeert de nieuwe gegevensstructuur. Bij de eerste V1-migratie wordt het originele JSON-bestand in `workout_basis_universal_v1_backup_before_v2` bewaard voordat de actieve opslag wordt vervangen. Bij onleesbare gegevens of mislukte migratie verschijnt een herstelscherm met een download van de oorspronkelijke gegevens. De backup wordt niet automatisch teruggezet, zodat latere trainingen niet worden overschreven.
-
-Persoonlijke oefening-ID's, instellingen, historie en lopende trainingen blijven behouden. `exerciseLibrary()` combineert persoonlijke oefeningen met centrale kenmerken en historie op oefening-ID. Verwijderde oefeningen met historie worden als gearchiveerde bibliotheekitems aangeboden en niet teruggezet in het basisschema. Onbekende eigen oefeningen worden niet automatisch aan een spiergroep toegewezen. Historie wordt niet gedupliceerd; het laatst gebruikte gewicht wordt daarvan afgeleid en blijft gescheiden van het instelbare gewicht.
-
-Fase 2: 15 automatische tests geslaagd, waaronder de 10 bestaande tests. Aanvullend in de browser getest: training starten, decimale gewichtsinvoer, cardio-invoer, sets afvinken, herladen/hervatten, afronden en historie. Geen fouten in de browserconsole. Safari/iPhone en Edge blijven onderdeel van fase 6.
-
-Zelfstandige Nederlandstalige workout-tracker, los van SVO Academy.
+# Workout Basis V2
 
 **Open de app:** https://wesleyhoelsgens-cyber.github.io/workout-basis/
 
-Gewichten en cardio zijn direct bewerkbaar, ook vóór het starten. Invoer wordt tijdens het typen bewaard; gewichten ondersteunen een decimale komma. Start een training om sets af te vinken en rond deze af om de training in de historie op te slaan. Via Personen kun je aparte profielen aanmaken en een JSON-backup exporteren.
+Zelfstandige Nederlandstalige workout-tracker, los van SVO Academy.
 
-Gegevens worden uitsluitend in de browser op dit apparaat opgeslagen, niet op GitHub. Ze synchroniseren niet tussen apparaten. De nieuwe website neemt gegevens uit een eerder lokaal HTML-bestand niet automatisch over. Backup importeren is nog niet ingebouwd.
+## Huidige versie
 
-## Controle
+V2 bevat fases 2 tot en met 5: centrale oefeningenbibliotheek, veilige V1-migratie, automatische workoutvoorstellen, zelf samenstellen, filters, volgorde aanpassen en koppeling met de bestaande tracker en historie. Kies een persoon, workouttype en beschikbare tijd; bekijk het voorstel en start daarna de training.
 
-Voer `node --test test.cjs` uit met Node.js. Tien tests controleren opslag/herladen, historie, oefeningen en cardio tijdens een training, profielwissels, invoercontrole, tekstescaping, opslagfouten en oudere trainingsgegevens.
+Gewichten en historie blijven via de oorspronkelijke oefening-ID gekoppeld. Cardio kan als warming-up worden gekozen. De geschatte duur rekent met twee minuten per set, een minuut toestelwissel per oefening en de gekozen cardiotijd. Het vaste basisschema wordt niet automatisch ingekort.
 
-Daarnaast handmatig in de browser gecontroleerd: training starten/afronden, gewicht aanpassen, set afvinken, historie, cardio toevoegen tijdens training en mobiele weergave op 390 pixels. Dit is geen test op een fysieke iPhone.
+De volledige mobiele afwerking en gerichte controles in Safari/iPhone en Edge (fase 6) staan nog open.
+
+## Gegevens
+
+Gegevens blijven lokaal in dezelfde browser opgeslagen onder `workout_basis_universal_v1`, met `schemaVersion: 2`. Bij migratie maakt de app eerst een kopie van de V1-opslag onder `workout_basis_universal_v1_backup_before_v2`. Bij een fout verschijnt een herstelscherm met downloadmogelijkheid voor de oorspronkelijke gegevens; de app schrijft dan geen leeg profiel over de opslag.
+
+Profielen, bestaande oefening-ID's, instellingen, historie en lopende trainingen worden behouden. Gegevens synchroniseren niet tussen apparaten. Gebruik Personen om een JSON-backup te exporteren. Backup importeren is nog niet ingebouwd. Wis de browsergegevens niet als je je historie wilt behouden.
+
+## Tests
+
+Voer `node --test test.cjs` uit met Node.js. Alle 30 tests slagen, inclusief migratie, bescherming bij opslagfouten, workoutselectie, aanpassingen, profielscheiding en gedeelde gewichtshistorie tussen workouttypes.
+
+De belangrijkste routes zijn ook in de browser getest: invoer, herladen, voorstellen, selecteren, volgorde wijzigen, starten, afronden en gewichtshistorie hergebruiken. Dit vervangt de nog geplande Safari/iPhone- en Edge-controles niet.
 
 ## Publicatie
 
-GitHub Pages publiceert `index.html` vanuit de hoofdmap van de branch `main`. Geen externe bibliotheken, tracking of server nodig.
+GitHub Pages publiceert `index.html` uit de hoofdmap van `main`. Er zijn geen externe bibliotheken of server nodig. De ontwikkelgeschiedenis staat ook op `codex/workout-v2`.
