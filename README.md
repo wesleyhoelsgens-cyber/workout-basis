@@ -2,7 +2,7 @@
 
 Zelfstandige Nederlandstalige workout-tracker, los van SVO Academy.
 
-**Open de app:** https://wesleyhoelsgens-cyber.github.io/workout-basis/
+Status: dit project staat privé op GitHub. Een openbare website is nog niet geactiveerd.
 
 Start een training, pas gewichten en cardio aan, vink sets af en rond de training af om deze in de historie op te slaan. Via Personen kun je aparte profielen aanmaken en een JSON-backup exporteren.
 
@@ -16,4 +16,4 @@ Daarnaast handmatig in de browser gecontroleerd: training starten/afronden, gewi
 
 ## Publicatie
 
-GitHub Pages publiceert `index.html` vanuit de hoofdmap van de branch `main`. Geen externe bibliotheken, tracking of server nodig.
+Voor een latere publicatie kan GitHub Pages `index.html` vanuit de hoofdmap van de branch `main` publiceren. Geen externe bibliotheken, tracking of server nodig.
