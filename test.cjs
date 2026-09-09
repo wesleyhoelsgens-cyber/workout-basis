@@ -3,6 +3,36 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const script=fs.readFileSync(__dirname+'/index.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+test('automatic proposals fit all time budgets and muscle groups without duplicates',()=>{
+  const t=setup();
+  for(const type of ['total','upper','lower','back','chest','legs'])for(const minutes of [30,45,60,90]){
+    const result=JSON.parse(t.run(`JSON.stringify(makeProposal({type:'${type}',minutes:${minutes},warmup:true,variation:0}))`));
+    assert.ok(result.estimatedMinutes<=minutes);assert.ok(result.exerciseIds.length>0);assert.equal(new Set(result.exerciseIds).size,result.exerciseIds.length);
+    assert.equal(t.run(`makeProposal({type:'${type}',minutes:${minutes},warmup:true}).exerciseIds.every(id=>workoutTypes().find(t=>t.id==='${type}').groups.includes(profile().exercises.find(e=>e.id===id).primaryMuscle))`),true);
+  }
+});
+test('fixed base remains complete even when longer than chosen time',()=>{
+  const t=setup();assert.equal(t.run('makeProposal({type:"base",minutes:30,warmup:true}).exerciseIds.length'),15);assert.ok(t.run('makeProposal({type:"base",minutes:30,warmup:true}).estimatedMinutes')>30);
+});
+test('viewing and regenerating proposal does not change base, history or active session',()=>{
+  const t=setup();t.run('startOrFinish()');const before=t.run('JSON.stringify([profile().exercises,profile().history,app.session])');
+  t.run('setBuilder("type","back");previewWorkout();previewWorkout(true)');assert.equal(t.run('JSON.stringify([profile().exercises,profile().history,app.session])'),before);
+  t.run('startProposal()');assert.equal(t.alerts.length,1);assert.equal(t.run('JSON.stringify([profile().exercises,profile().history,app.session])'),before);
+});
+test('proposal session contains only selected IDs through reload and completion',()=>{
+  const t=setup();t.run('setBuilder("type","back");setBuilder("minutes",30);setBuilder("warmup",false);previewWorkout();startProposal()');
+  const ids=t.run('JSON.stringify(app.session.exerciseIds)');assert.equal(t.run('JSON.stringify(app.session.items.map(e=>e.exerciseId))'),ids);assert.equal(t.run('app.session.cardio.length'),0);
+  const r=setup(t.stored());assert.equal(r.run('JSON.stringify(app.session.items.map(e=>e.exerciseId))'),ids);r.run('setWeight(app.session.items[0].exerciseId,"70");toggleSet(app.session.items[0].exerciseId,1);startOrFinish()');
+  assert.equal(r.run('JSON.stringify(profile().history[0].items.map(e=>e.exerciseId))'),ids);assert.equal(r.run('profile().exercises.length'),15);assert.equal(r.run('lastWeight(profile().history[0].items[0].exerciseId)'),70);
+});
+test('each person retains their own builder selection and proposal',()=>{
+  const t=setup();t.run('globalThis.first=app.activeProfile;setBuilder("type","lower");previewWorkout();document.getElementById("newProfileName").value="Tweede";addProfile()');
+  assert.equal(t.run('builderSettings().type'),'total');assert.equal(t.run('profile().workoutProposal'),undefined);t.run('switchProfile(first)');assert.equal(t.run('profile().workoutProposal.type'),'lower');
+});
+test('empty library and too-long warmup do not invent exercises',()=>{
+  const t=setup();t.run('profile().exercises=[]');assert.equal(t.run('makeProposal({type:"total",minutes:30,warmup:true}).exerciseIds.length'),0);
+  t.run('profile().exercises=defaultExercises();profile().cardio[0].minutes=90');assert.equal(t.run('makeProposal({type:"total",minutes:30,warmup:true}).exerciseIds.length'),0);
+});
 function legacyFixture(){
   const seed=setup();
   seed.run('startOrFinish();setWeight(profile().exercises[0].id,"45");toggleSet(profile().exercises[0].id,2);startOrFinish();startOrFinish();toggleSet(profile().exercises[0].id,1)');

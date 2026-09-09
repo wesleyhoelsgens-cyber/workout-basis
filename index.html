@@ -89,6 +89,7 @@ button{min-height:44px}
   .modalback{height:-webkit-fill-available}
 }
 
+.builder-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.builder-grid button{min-height:56px;text-align:left}.builder-grid button[aria-pressed="true"],.time-choice[aria-pressed="true"]{outline:2px solid #f5f7fa;background:#344050;color:white}.proposal-item{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.proposal-item span{flex:1}.builder-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.builder-actions button{flex:1;min-width:120px}.builder-help{color:var(--muted);font-size:.9rem;line-height:1.5}.time-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.time-row button{padding:12px 4px}.builder-grid+label{display:block;margin-top:14px}
 </style>
 </head>
 <body>
@@ -111,6 +112,7 @@ button{min-height:44px}
   </div>
 
   <div class="tabs">
+    <button class="tab secondary" id="tabBuilder" onclick="showTab('builder')">Vandaag</button>
     <button class="tab active" id="tabWorkout" onclick="showTab('workout')">Training</button>
     <button class="tab secondary" id="tabHistory" onclick="showTab('history')">Historie</button>
   </div>
@@ -129,6 +131,7 @@ button{min-height:44px}
     </div>
   </div>
 <div class="card" style="margin-bottom:14px" id="sessionHint" role="status"></div>
+<section id="builderView"></section>
 <section id="workoutView"></section>
   <section id="historyView" style="display:none"></section>
 </div>
@@ -409,7 +412,7 @@ const EXERCISE_CATALOG=[
 ];
 let recoveryRaw=null;
 let app = load();
-let activeTab='workout';
+let activeTab=app && app.session && app.session.profileId===app.activeProfile?'workout':'builder';
 
 function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
 function today(){return new Date().toLocaleDateString('nl-NL')}
@@ -503,16 +506,96 @@ function validateFields(ids){
 function syncSession(){
   const p=profile(),s=app.session;
   if(!s || s.profileId!==p.id)return;
-  s.items=p.exercises.map(e=>s.items.find(x=>x.exerciseId===e.id)||{exerciseId:e.id,name:e.name,sets:e.sets,reps:e.reps,weight:e.weight,completedSets:[]});
-  s.cardio=(p.cardio||[]).map(c=>(s.cardio||[]).find(x=>x.cardioId===c.id)||{cardioId:c.id,type:c.type,minutes:c.minutes,level:c.level,calories:c.calories,note:c.note||''});
+  s.items=p.exercises.filter(e=>!s.exerciseIds || s.exerciseIds.includes(e.id)).sort((a,b)=>s.exerciseIds?s.exerciseIds.indexOf(a.id)-s.exerciseIds.indexOf(b.id):0).map(e=>s.items.find(x=>x.exerciseId===e.id)||{exerciseId:e.id,name:e.name,sets:e.sets,reps:e.reps,weight:e.weight,completedSets:[]});
+  s.cardio=(p.cardio||[]).filter(c=>!s.cardioIds || s.cardioIds.includes(c.id)).map(c=>(s.cardio||[]).find(x=>x.cardioId===c.id)||{cardioId:c.id,type:c.type,minutes:c.minutes,level:c.level,calories:c.calories,note:c.note||''});
 }
 function profile(){return app.profiles[app.activeProfile]}
 
+function workoutTypes(){return [
+  {id:'base',name:'Vast basisschema',groups:[]},
+  {id:'total',name:'Total Body',groups:['Benen','Hamstrings','Borst','Rug','Schouders','Core','Billen','Biceps','Triceps']},
+  {id:'upper',name:'Bovenlichaam',groups:['Borst','Rug','Schouders','Biceps','Triceps','Core']},
+  {id:'lower',name:'Onderlichaam',groups:['Benen','Hamstrings','Billen']},
+  {id:'back',name:'Rug + Biceps',groups:['Rug','Biceps']},
+  {id:'chest',name:'Borst + Triceps',groups:['Borst','Triceps']},
+  {id:'legs',name:'Benen + Billen',groups:['Benen','Billen','Hamstrings']}
+]}
+function builderSettings(){return profile().builderSettings || {type:'total',minutes:60,warmup:true,variation:0}}
+function exerciseMinutes(e){return Math.max(1,Number(e.sets)||3)*2+1}
+function proposalMinutes(ids,cardioIds,p=profile()){
+  return ids.reduce((n,id)=>n+exerciseMinutes(p.exercises.find(e=>e.id===id)||{}),0)+cardioIds.reduce((n,id)=>n+Number(p.cardio.find(c=>c.id===id)?.minutes||0),0);
+}
+function makeProposal(settings,p=profile()){
+  const type=workoutTypes().find(t=>t.id===settings.type);
+  if(!type || ![30,45,60,90].includes(settings.minutes))throw Error('Ongeldige workoutkeuze');
+  const cardioIds=settings.warmup && p.cardio.length?[p.cardio[0].id]:[];
+  const candidates=p.exercises.filter(e=>type.id==='base' || type.groups.includes(e.primaryMuscle));
+  let chosen=[];
+  if(type.id==='base')chosen=[...candidates];
+  else{
+    const rotation=settings.variation||0;
+    const buckets=type.groups.map(group=>{
+      const items=candidates.filter(e=>e.primaryMuscle===group);
+      const offset=items.length?rotation%items.length:0;
+      return [...items.slice(offset),...items.slice(0,offset)];
+    });
+    // Alternate muscle groups before selecting additional exercises for a group.
+    let used=proposalMinutes([],cardioIds,p);
+    while(buckets.some(items=>items.length))for(const items of buckets){
+      const e=items.shift();if(e && used+exerciseMinutes(e)<=settings.minutes){chosen.push(e);used+=exerciseMinutes(e)}
+    }
+  }
+  const exerciseIds=chosen.map(e=>e.id),estimatedMinutes=proposalMinutes(exerciseIds,cardioIds,p);
+  return {name:type.name,type:type.id,minutes:settings.minutes,exerciseIds,cardioIds,estimatedMinutes};
+}
+function setBuilder(field,value){
+  const settings={...builderSettings(),[field]:value,variation:0};
+  profile().builderSettings=settings;profile().workoutProposal=null;save();
+}
+function previewWorkout(another=false){
+  const settings={...builderSettings()};
+  if(another)settings.variation=(settings.variation||0)+1;
+  const previous=profile().workoutProposal,proposal=makeProposal(settings);
+  profile().builderSettings=settings;
+  proposal.sameAsPrevious=!!(another && previous && previous.exerciseIds.join()===proposal.exerciseIds.join());
+  profile().workoutProposal=proposal;save();
+}
+function startProposal(){
+  if(app.session){alert('Er loopt al een training. Rond die eerst af via Training.');return}
+  const draft=profile().workoutProposal;if(!draft)return;
+  startOrFinish(draft);
+}
+function renderBuilder(){
+  const settings=builderSettings(),draft=profile().workoutProposal,p=profile();
+  const types=workoutTypes();
+  const selected=types.find(t=>t.id===settings.type)||types[1];
+  document.getElementById('builderView').innerHTML=`<div class="card">
+    <h2 style="margin:0">Wat wil je vandaag trainen?</h2>
+    <p class="builder-help">Voor ${esc(p.name)}. Je basisschema en eerdere trainingen blijven bewaard.</p>
+    <div class="builder-grid">${types.map(t=>`<button class="secondary" aria-pressed="${settings.type===t.id}" onclick="setBuilder('type','${t.id}')">${esc(t.name)}</button>`).join('')}<button class="secondary" disabled>Zelf samenstellen — binnenkort</button></div>
+    <h3>Hoeveel tijd heb je?</h3>
+    <div class="time-row">${[30,45,60,90].map(n=>`<button class="secondary time-choice" aria-pressed="${settings.minutes===n}" onclick="setBuilder('minutes',${n})">${n} min</button>`).join('')}</div>
+    <div class="builder-actions"><button class="secondary" aria-pressed="${!!settings.warmup}" onclick="setBuilder('warmup',${!settings.warmup})">Warming-up: ${settings.warmup?'aan':'uit'}</button></div>
+    <p class="builder-help">${p.cardio.length?`Warming-up: ${esc(p.cardio[0].type)}, ${p.cardio[0].minutes} minuten. Aanpassen kan bij Training.`:'Voeg via + Cardio een warming-up toe.'} De tijd is een schatting inclusief sets, rust en wisselen van toestel.</p>
+    <button onclick="previewWorkout()">Bekijk voorstel</button>
+  </div>${draft?`<div class="card" style="margin-top:14px"><h2>Voorstel: ${esc(draft.name)}</h2>
+    <p>${draft.exerciseIds.length} oefeningen • ±${draft.estimatedMinutes} minuten</p>
+    ${draft.estimatedMinutes>draft.minutes?'<p class="builder-help">Je vaste basisschema is langer dan de gekozen tijd. Alle oefeningen blijven behouden.</p>':''}
+    ${draft.sameAsPrevious?'<p role="status">Er zijn binnen deze keuze en tijd geen andere oefeningen beschikbaar.</p>':''}
+    ${draft.cardioIds.map(id=>{const c=p.cardio.find(c=>c.id===id);return c?`<div class="proposal-item"><span>Warming-up: ${esc(c.type)}</span><strong>${c.minutes} min</strong></div>`:''}).join('')}
+    ${draft.exerciseIds.map((id,i)=>{const e=p.exercises.find(e=>e.id===id);return e?`<div class="proposal-item"><strong>${i+1}</strong><span>${esc(e.name)}<br><small class="builder-help">${esc(e.primaryMuscle||'Nog niet ingedeeld')} • ${e.sets} × ${e.reps}</small></span></div>`:'<p>Een oefening is verwijderd. Maak een nieuw voorstel.</p>'}).join('')}
+    ${!draft.exerciseIds.length?'<p role="status">Geen passende oefeningen binnen deze tijd. Kies meer tijd, zet de warming-up uit of voeg oefeningen toe.</p>':''}
+    <div class="builder-actions"><button class="secondary" onclick="previewWorkout(true)" ${selected.id==='base'?'disabled':''}>Andere workout</button><button class="secondary" disabled>Aanpassen — binnenkort</button><button onclick="startProposal()" ${!draft.exerciseIds.length?'disabled':''}>Start training</button></div>
+  </div>`:''}`;
+}
+
 function render(){
+  renderBuilder();
   syncSession();
   renderProfileSelect();
   renderWorkout();
   renderHistory();
+  showTab(activeTab);
   document.getElementById('sessionHint').textContent=app.session && app.session.profileId===app.activeProfile?'Training bezig. Vul je waarden in, vink sets af en kies Training afronden om de training te bewaren.':'Je kunt gewichten en cardio direct aanpassen. Kies Training starten om sets en een training in je historie bij te houden.';
   document.getElementById('sessionBtn').textContent=app.session && app.session.profileId===app.activeProfile?'Training afronden':'Training starten';
 }
@@ -538,7 +621,8 @@ function completedSets(ex){
 }
 function renderWorkout(){
   const v=document.getElementById('workoutView');
-  const cardioHtml=(profile().cardio||[]).map(c=>{
+  const selected=app.session && app.session.profileId===app.activeProfile?app.session:null;
+  const cardioHtml=(profile().cardio||[]).filter(c=>!selected?.cardioIds || selected.cardioIds.includes(c.id)).map(c=>{
     const prev=lastCardio(c.id);
     const active=app.session && app.session.profileId===app.activeProfile;
     const cur=active ? app.session.cardio.find(x=>x.cardioId===c.id) : c;
@@ -570,7 +654,7 @@ function renderWorkout(){
     </div>`
   }).join('');
 
-  const exHtml=profile().exercises.map(ex=>{
+  const exHtml=profile().exercises.filter(e=>!selected?.exerciseIds || selected.exerciseIds.includes(e.id)).sort((a,b)=>selected?.exerciseIds?selected.exerciseIds.indexOf(a.id)-selected.exerciseIds.indexOf(b.id):0).map(ex=>{
     const prev=lastWeight(ex.id), cur=currentWeight(ex), done=completedSets(ex);
     const active=app.session && app.session.profileId===app.activeProfile;
     return `<div class="card exercise">
@@ -605,16 +689,16 @@ function renderHistory(){
   const v=document.getElementById('historyView'), h=[...profile().history].reverse();
   if(!h.length){v.innerHTML='<div class="card empty">Nog geen afgeronde trainingen.</div>';return}
   v.innerHTML=h.map(s=>`<div class="card" style="margin-bottom:12px">
-    <div class="exercise-top"><div><h3 style="margin:0">${esc(s.date)}</h3><div class="meta">${s.items.length} oefeningen</div></div><span class="badge">opgeslagen</span></div>
+    <div class="exercise-top"><div><h3 style="margin:0">${esc(s.date)}</h3>${s.workoutName?`<div class="meta">${esc(s.workoutName)}</div>`:''}<div class="meta">${s.items.length} oefeningen</div></div><span class="badge">opgeslagen</span></div>
     ${(s.cardio||[]).map(c=>`<div class="history-item"><span>${esc(c.type)}</span><strong>${c.minutes} min • niveau ${c.level} • ${c.calories} kcal</strong></div>`).join('')}
     ${s.items.map(i=>`<div class="history-item"><span>${esc(i.name)}</span><strong>${fmt(i.weight)} kg • ${Array.isArray(i.completedSets)?i.completedSets.length:i.completedSets}/${i.sets} sets</strong></div>`).join('')}
   </div>`).join('');
 }
-function startOrFinish(){
+function startOrFinish(proposal=null){
   const p=profile();
   if(app.session && app.session.profileId===p.id){
     const s=app.session;
-    p.history.push({date:today(),timestamp:Date.now(),cardio:(s.cardio||[]).map(x=>({...x})),items:s.items.map(x=>({...x}))});
+    p.history.push({date:today(),timestamp:Date.now(),...(s.workoutName?{workoutName:s.workoutName,plannedMinutes:s.plannedMinutes}:{}),cardio:(s.cardio||[]).map(x=>({...x})),items:s.items.map(x=>({...x}))});
     (s.cardio||[]).forEach(item=>{
       const c=(p.cardio||[]).find(x=>x.id===item.cardioId);
       if(c){ c.minutes=item.minutes; c.level=item.level; c.calories=item.calories; }
@@ -626,11 +710,13 @@ function startOrFinish(){
     app.session=null; save(); return;
   }
   if(app.session){alert('Rond eerst de lopende training van '+app.profiles[app.session.profileId].name+' af. Je kunt via Personen teruggaan.');return}
-  app.session={profileId:p.id,started:Date.now(),cardio:(p.cardio||[]).map(c=>({
+  if(proposal && (!proposal.exerciseIds.length || proposal.exerciseIds.some(id=>!p.exercises.some(e=>e.id===id)))){alert('Dit voorstel is niet meer geldig. Maak een nieuw voorstel.');return}
+  app.session={profileId:p.id,started:Date.now(),...(proposal?{exerciseIds:[...proposal.exerciseIds],cardioIds:[...proposal.cardioIds],workoutName:proposal.name,plannedMinutes:proposal.minutes}:{}),cardio:(p.cardio||[]).map(c=>({
     cardioId:c.id,type:c.type,minutes:c.minutes,level:c.level,calories:c.calories,note:c.note||''
   })),items:p.exercises.map(e=>({
     exerciseId:e.id,name:e.name,sets:e.sets,reps:e.reps,weight:e.weight,completedSets:[]
   }))};
+  showTab('workout');
   save();
 }
 function weightTarget(id){
@@ -745,11 +831,16 @@ function deleteProfile(id){
 }
 function switchProfile(id){
   app.activeProfile=id;
+  activeTab=app.session?.profileId===id?'workout':'builder';
   // Keep the other person's unfinished training until they return.
   save();
 }
 function showTab(t){
   activeTab=t;
+  document.getElementById('sessionBtn').style.display=t==='builder'?'none':'';
+  document.getElementById('sessionHint').style.display=t==='builder'?'none':'';
+  document.getElementById('builderView').style.display=t==='builder'?'block':'none';
+  document.getElementById('tabBuilder').className='tab '+(t==='builder'?'active':'secondary');
   document.getElementById('workoutView').style.display=t==='workout'?'block':'none';
   document.getElementById('historyView').style.display=t==='history'?'block':'none';
   document.getElementById('tabWorkout').className='tab '+(t==='workout'?'active':'secondary');
