@@ -3,6 +3,9 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const script=fs.readFileSync(__dirname+'/index.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+test('weights and cardio editable before starting and decimal comma supported',()=>{const t=setup();t.run('setWeight(profile().exercises[0].id,"42,5",true);setCardio(profile().cardio[0].id,"minutes","18",true)');const r=setup(t.stored());assert.equal(r.run('profile().exercises[0].weight'),42.5);assert.equal(r.run('profile().cardio[0].minutes'),18);assert.equal(r.run('app.session'),null);r.run('changeWeight(profile().exercises[0].id,1);startOrFinish()');assert.equal(r.run('app.session.items[0].weight'),43.5)});
+test('typing persists without replacing inputs and survives immediate finish',()=>{const t=setup();t.run('startOrFinish()');const before=t.el.workoutView.innerHTML;t.run('setWeight(profile().exercises[0].id,"55,5",true);setCardio(profile().cardio[0].id,"calories","120",true)');assert.equal(t.el.workoutView.innerHTML,before);t.run('startOrFinish()');assert.equal(t.run('profile().history[0].items[0].weight'),55.5);assert.equal(t.run('profile().history[0].cardio[0].calories'),120)});
+test('editing another profile leaves running session untouched',()=>{const t=setup();t.run('startOrFinish();document.getElementById("newProfileName").value="Tweede";addProfile();setWeight(profile().exercises[0].id,"60",true)');assert.equal(t.run('app.session.items[0].weight'),36);assert.equal(t.run('profile().exercises[0].weight'),60)});
 function setup(saved){
   const elements={},alerts=[];let stored=saved;
   const ctx=vm.createContext({console,Date,Math,Number,JSON,Array,Object,String,Blob,URL,

@@ -128,6 +128,7 @@ button{min-height:44px}
       Deze versie is geoptimaliseerd voor iPhone. Je gegevens worden lokaal in de browser opgeslagen.
     </div>
   </div>
+<div class="card" style="margin-bottom:14px" id="sessionHint" role="status"></div>
 <section id="workoutView"></section>
   <section id="historyView" style="display:none"></section>
 </div>
@@ -230,10 +231,11 @@ function load(){
     ],history:[]}
   }};
 }
-function save(){
+function save(redraw=true){
+  syncSession();
   try{localStorage.setItem(KEY,JSON.stringify(app))}
   catch(e){alert('Opslaan is niet gelukt. Exporteer een backup via Personen voordat je deze pagina sluit.')}
-  render();
+  if(redraw)render();
 }
 function validateFields(ids){
   for(const id of ids){const el=document.getElementById(id);if(el.value.trim()==='' || !el.checkValidity() || !Number.isFinite(Number(el.value))){el.reportValidity();alert('Vul een geldige waarde in voor '+(el.getAttribute('aria-label')||el.placeholder)+'.');el.focus();return false}}
@@ -252,6 +254,7 @@ function render(){
   renderProfileSelect();
   renderWorkout();
   renderHistory();
+  document.getElementById('sessionHint').textContent=app.session && app.session.profileId===app.activeProfile?'Training bezig. Vul je waarden in, vink sets af en kies Training afronden om de training te bewaren.':'Je kunt gewichten en cardio direct aanpassen. Kies Training starten om sets en een training in je historie bij te houden.';
   document.getElementById('sessionBtn').textContent=app.session && app.session.profileId===app.activeProfile?'Training afronden':'Training starten';
 }
 function renderProfileSelect(){
@@ -291,17 +294,17 @@ function renderWorkout(){
       <div class="cardio-grid">
         <div class="cardio-field">
           <div class="label">Minuten</div>
-          <input type="number" min="1" aria-label="Minuten ${esc(c.type)}" value="${cur.minutes}" ${!active?'disabled':''} onchange="setCardio('${c.id}','minutes',this.value)">
+          <input type="number" min="1" aria-label="Minuten ${esc(c.type)}" value="${cur.minutes}"  inputmode="numeric" oninput="setCardio('${c.id}','minutes',this.value,true)" onchange="setCardio('${c.id}','minutes',this.value)">
           <div class="meta">Vorige keer: ${prev?prev.minutes+' min':'—'}</div>
         </div>
         <div class="cardio-field">
           <div class="label">Zwaarte / niveau</div>
-          <input type="number" min="0" step="1" aria-label="Zwaarte / niveau ${esc(c.type)}" value="${cur.level}" ${!active?'disabled':''} onchange="setCardio('${c.id}','level',this.value)">
+          <input type="number" min="0" step="1" aria-label="Zwaarte / niveau ${esc(c.type)}" value="${cur.level}"  inputmode="numeric" oninput="setCardio('${c.id}','level',this.value,true)" onchange="setCardio('${c.id}','level',this.value)">
           <div class="meta">Vorige keer: ${prev?prev.level:'—'}</div>
         </div>
         <div class="cardio-field">
           <div class="label">Calorieën verbrand</div>
-          <input type="number" min="0" step="1" aria-label="Calorieën ${esc(c.type)}" value="${cur.calories}" ${!active?'disabled':''} onchange="setCardio('${c.id}','calories',this.value)">
+          <input type="number" min="0" step="1" aria-label="Calorieën ${esc(c.type)}" value="${cur.calories}"  inputmode="numeric" oninput="setCardio('${c.id}','calories',this.value,true)" onchange="setCardio('${c.id}','calories',this.value)">
           <div class="meta">Vorige keer: ${prev?prev.calories+' kcal':'—'}</div>
         </div>
       </div>
@@ -328,9 +331,9 @@ function renderWorkout(){
         <div class="metric">
           <div class="label">Vandaag</div>
           <div class="weight-edit">
-            <button class="secondary" ${!active?'disabled':''} aria-label="Gewicht verlagen" onclick="changeWeight('${ex.id}',-${ex.step})">−</button>
-            <input class="weight-input" type="number" min="0" aria-label="Gewicht ${esc(ex.name)} in kg" step="0.5" value="${cur}" ${!active?'disabled':''} onchange="setWeight('${ex.id}',this.value)">
-            <button class="secondary" ${!active?'disabled':''} aria-label="Gewicht verhogen" onclick="changeWeight('${ex.id}',${ex.step})">+</button>
+            <button class="secondary"  aria-label="Gewicht verlagen" onclick="changeWeight('${ex.id}',-${ex.step})">−</button>
+            <input class="weight-input" type="text" inputmode="decimal" aria-label="Gewicht ${esc(ex.name)} in kg" value="${cur}"  oninput="setWeight('${ex.id}',this.value,true)" onchange="setWeight('${ex.id}',this.value)">
+            <button class="secondary"  aria-label="Gewicht verhogen" onclick="changeWeight('${ex.id}',${ex.step})">+</button>
           </div>
         </div>
       </div>
@@ -371,14 +374,21 @@ function startOrFinish(){
   }))};
   save();
 }
+function weightTarget(id){
+  return app.session && app.session.profileId===app.activeProfile ? app.session.items.find(x=>x.exerciseId===id) : profile().exercises.find(x=>x.id===id);
+}
 function changeWeight(id,delta){
-  const it=app.session?.items.find(x=>x.exerciseId===id); if(!it)return;
+  const it=weightTarget(id); if(!it)return;
   it.weight=Math.max(0,Math.round((Number(it.weight)+delta)*2)/2); save();
 }
-function setWeight(id,val){
-  const it=app.session?.items.find(x=>x.exerciseId===id); if(!it)return;
-  if(val.trim()==='' || !Number.isFinite(Number(val)) || Number(val)<0){alert('Vul een geldig gewicht van 0 kg of meer in.');render();return}
-  it.weight=Number(val); save();
+function setWeight(id,val,typing=false){
+  const it=weightTarget(id); if(!it)return;
+  const text=String(val).trim().replace(',','.');
+  if(!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(text) || !Number.isFinite(Number(text))){
+    if(!typing){alert('Vul een geldig gewicht van 0 kg of meer in.');render()}
+    return;
+  }
+  it.weight=Number(text); save(false);
 }
 function toggleSet(id,n){
   const it=app.session?.items.find(x=>x.exerciseId===id); if(!it)return;
@@ -412,11 +422,16 @@ function lastCardio(cardioId){
   }
   return null;
 }
-function setCardio(id,field,val){
-  const it=app.session?.cardio?.find(x=>x.cardioId===id); if(!it)return;
+function setCardio(id,field,val,typing=false){
+  if(!['minutes','level','calories'].includes(field))return;
+  const it=app.session && app.session.profileId===app.activeProfile ? app.session.cardio.find(x=>x.cardioId===id) : profile().cardio.find(x=>x.id===id);
+  if(!it)return;
   const minimum=field==='minutes'?1:0;
-  if(val.trim()==='' || !Number.isFinite(Number(val)) || Number(val)<minimum || !Number.isInteger(Number(val))){alert('Vul een geldig heel getal van '+minimum+' of meer in.');render();return}
-  it[field]=Number(val); save();
+  if(String(val).trim()==='' || !Number.isFinite(Number(val)) || Number(val)<minimum || !Number.isInteger(Number(val))){
+    if(!typing){alert('Vul een geldig heel getal van '+minimum+' of meer in.');render()}
+    return;
+  }
+  it[field]=Number(val); save(false);
 }
 function openCardio(){document.getElementById('cardioModal').style.display='flex'}
 function closeCardio(){document.getElementById('cardioModal').style.display='none'}
